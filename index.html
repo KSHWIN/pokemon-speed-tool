@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>寶可夢速度工具</title>
+<style>
+/* ── Shared ── */
+:root{
+  --bg:#f0f0ff;--card:#fff;--border:#e2e8f0;
+  --txt:#1e293b;--muted:#64748b;
+  --up:#059669;--dn:#dc2626;
+  --mega:#f59e0b;--accent:#6366f1;--accent2:#ec4899;
+  --sh:0 4px 24px #0002;
+  --lead:#8b5cf6;--atk:#ef4444;--tank:#16a34a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:"Segoe UI","Microsoft JhengHei",system-ui,sans-serif}
+
+/* ── Main Nav ── */
+.main-nav{
+  background:linear-gradient(135deg,#4f46e5,#ec4899);
+  color:#fff;display:flex;align-items:center;flex-wrap:wrap;
+  gap:.5rem 1rem;padding:.75rem 1.5rem;
+}
+.site-title{font-size:1.1rem;font-weight:800;white-space:nowrap}
+.app-tabs{display:flex;gap:.4rem;margin-left:auto}
+.app-tab{
+  border:2px solid rgba(255,255,255,.45);border-radius:20px;
+  padding:.3rem .9rem;font-size:.85rem;font-weight:700;
+  cursor:pointer;background:transparent;color:rgba(255,255,255,.8);
+  transition:.15s;
+}
+.app-tab.active,.app-tab:hover{background:#fff;color:#4f46e5;border-color:#fff}
+
+/* ── Chart App ── */
+#chart-app {
+  .hd{background:#f8fafc;border-bottom:1px solid var(--border);color:var(--txt);
+    padding:.7rem 1.5rem;display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem}
+  .hd h1{font-size:1rem;font-weight:700}
+  .hd p{font-size:.76rem;color:var(--muted)}
+  .src{font-size:.72rem;background:#ede9fe;border-radius:20px;padding:.2rem .65rem;border:1px solid #c4b5fd;color:#6d28d9}
+  .mode-wrap{margin-left:auto;display:flex;gap:.4rem;align-items:center}
+  .mode-btn{border:2px solid var(--border);border-radius:20px;padding:.28rem .85rem;
+    font-size:.83rem;font-weight:700;cursor:pointer;background:#fff;color:var(--muted);transition:.15s}
+  .mode-btn.on{background:#6366f1;color:#fff;border-color:#6366f1}
+  .mode-btn:hover:not(.on){background:#ede9fe}
+  .card{background:var(--card);border-radius:16px;box-shadow:var(--sh);border:1px solid var(--border);overflow:hidden;margin:1.2rem 1.5rem .8rem}
+  .card-hd{padding:.75rem 1.2rem;border-bottom:1px solid var(--border);background:#f8fafc;
+    display:flex;align-items:center;flex-wrap:wrap;gap:.5rem}
+  .card-hd h2{font-size:.95rem;font-weight:700;margin-right:.5rem}
+  .legend{display:flex;flex-wrap:wrap;gap:.45rem;font-size:.72rem;color:var(--muted)}
+  .leg{display:flex;align-items:center;gap:.28rem}
+  .lc{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .lu{width:16px;height:3px;border-radius:2px;background:var(--up)}
+  .ld{width:16px;height:3px;border-radius:2px;background:var(--dn)}
+  .cv-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+  .cv-wrap{position:relative;display:inline-block}
+  canvas{display:block}
+  .sp-overlay{position:absolute;top:0;left:0;pointer-events:none;width:100%;height:100%}
+  .spdot{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;
+    width:54px;height:54px;border-radius:50%;border:3px solid #ccc;overflow:hidden;
+    transition:transform .15s,box-shadow .15s;background:#f8fafc}
+  .spdot img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated;display:block}
+  .spdot:hover{transform:translate(-50%,-50%) scale(1.15);z-index:10}
+  .spdot.hl{transform:translate(-50%,-50%) scale(1.2);z-index:20}
+  .spdot .rk-tag{position:absolute;top:-2px;left:-2px;background:currentColor;color:#fff;
+    font-size:8px;font-weight:700;padding:1px 4px;border-radius:4px;pointer-events:none}
+  .megadot{position:absolute;transform:translate(-50%,-50%);pointer-events:none;
+    width:16px;height:16px;border-radius:50%;border:1.5px solid #f59e0b;background:#fffbeb;overflow:hidden}
+  .megadot img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated;display:block}
+  .spd-val{position:absolute;transform:translateX(-50%);font-size:12px;font-weight:600;color:#475569;
+    pointer-events:none;white-space:nowrap}
+  .nm-label{position:absolute;font-size:11px;color:#64748b;pointer-events:none;white-space:nowrap;
+    transform-origin:top center;transform:translateX(-50%) rotate(-40deg)}
+  .nm-label.hl{color:#1e293b;font-weight:700}
+  .pri-badge{position:absolute;transform:translateX(-50%);background:#ea580c;color:#fff;
+    font-size:8px;font-weight:800;padding:1px 4px;border-radius:4px;pointer-events:none;
+    white-space:nowrap;z-index:15;letter-spacing:.02em}
+  .filters{padding:.6rem 1.2rem;border-bottom:1px solid var(--border);background:#f8fafc;
+    display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
+  .fl{font-size:.76rem;color:var(--muted);white-space:nowrap}
+  .fl b{color:var(--txt)}
+  input[type=range]{accent-color:var(--accent);width:110px;cursor:pointer}
+  select{border:1px solid var(--border);border-radius:8px;padding:.28rem .55rem;font-size:.78rem;background:#fff;cursor:pointer}
+  .tbtn{border:1.5px solid var(--border);border-radius:20px;padding:.25rem .7rem;font-size:.75rem;cursor:pointer;background:#fff;color:var(--muted);transition:.15s}
+  .tbtn.on{background:var(--mega);border-color:var(--mega);color:#fff;font-weight:700}
+  .tw{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:.8rem}
+  thead th{background:#f1f5f9;color:var(--muted);font-size:.68rem;text-transform:uppercase;
+    letter-spacing:.04em;padding:.55rem .75rem;text-align:left;border-bottom:2px solid var(--border);
+    white-space:nowrap;cursor:pointer;user-select:none}
+  thead th:hover{color:var(--accent)}
+  thead th.asc::after{content:" ↑"}
+  thead th.dsc::after{content:" ↓"}
+  tbody tr{border-bottom:1px solid var(--border);transition:.12s;cursor:pointer}
+  tbody tr:hover{background:#ede9fe22}
+  tbody tr.hl{background:#ede9fe!important;outline:2px solid var(--accent);outline-offset:-2px}
+  td{padding:.5rem .75rem;vertical-align:middle}
+  .rk{width:2.8rem;text-align:center}
+  .rk-badge{display:inline-block;padding:.1rem .4rem;border-radius:6px;font-size:.7rem;font-weight:700;background:#ede9fe;color:var(--accent)}
+  .spr{width:50px;text-align:center}
+  .spr img{width:44px;height:44px;object-fit:contain;image-rendering:pixelated}
+  .nm .zh{font-weight:700;font-size:.88rem}
+  .nm .en{font-size:.66rem;color:var(--muted)}
+  .badge{display:inline-block;padding:.1rem .4rem;border-radius:5px;font-size:.64rem;font-weight:700;color:#fff;margin:.08rem;text-shadow:0 1px 1px #0004}
+  .mbadge{background:var(--mega)}
+  .sc{text-align:center;font-variant-numeric:tabular-nums}
+  .sc.hi{color:var(--accent);font-weight:700}
+  .chip{display:inline-block;padding:.1rem .4rem;border-radius:7px;font-size:.72rem;font-weight:700;color:#fff;text-shadow:0 1px 1px #0003}
+  .mrow td{background:#fffbeb;padding:.3rem .75rem .3rem 2.2rem;font-size:.76rem;border-bottom:1px solid #fde68a}
+  .mrow .mn{font-weight:600;color:#92400e}
+  .dtag{font-size:.7rem;font-weight:700;padding:.08rem .32rem;border-radius:5px}
+  .dtag.up{background:#d1fae5;color:var(--up)}
+  .dtag.dn{background:#fee2e2;color:var(--dn)}
+  .dtag.eq{background:#f1f5f9;color:var(--muted)}
+  .br-badge{display:inline-block;padding:.1rem .45rem;border-radius:6px;font-size:.72rem;font-weight:700;background:#e0f2fe;color:#0284c7}
+  .none{text-align:center;padding:2.5rem;color:var(--muted)}
+}
+
+/* ── Quiz App ── */
+#quiz-app {
+  .hd{background:linear-gradient(135deg,#4f46e5,#ec4899);color:#fff;padding:.85rem 1.5rem .7rem;text-align:center}
+  .hd h1{font-size:1.4rem;font-weight:800}
+  .hd p{font-size:.8rem;opacity:.85;margin-top:.15rem}
+  .tabs{display:flex;justify-content:center;align-items:center;gap:.4rem;padding:.6rem 1rem;
+    background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .tab{border:2px solid var(--border);border-radius:20px;padding:.28rem .75rem;font-size:.8rem;
+    font-weight:600;cursor:pointer;background:#fff;color:var(--muted);transition:.15s}
+  .tab.active[data-role=""]{background:#6366f1;border-color:#6366f1;color:#fff}
+  .tab.active[data-role="lead"]{background:var(--lead);border-color:var(--lead);color:#fff}
+  .tab.active[data-role="attacker"]{background:var(--atk);border-color:var(--atk);color:#fff}
+  .tab.active[data-role="tank"]{background:var(--tank);border-color:var(--tank);color:#fff}
+  .hard-btn{border:2px solid #f59e0b;border-radius:20px;padding:.28rem .8rem;font-size:.8rem;
+    font-weight:700;cursor:pointer;background:#fff;color:#f59e0b;transition:.15s;margin-left:.4rem}
+  .hard-btn.on{background:#f59e0b;color:#fff}
+  .score-bar{display:flex;justify-content:space-between;align-items:center;
+    padding:.45rem 1.2rem;background:#f8fafc;border-bottom:1px solid var(--border);font-size:.82rem}
+  .score-bar b{color:#4f46e5}
+  .streak{color:#f59e0b;font-weight:700}
+  .wrap{max-width:600px;margin:0 auto;padding:.8rem 1rem 3rem}
+  .role-label{display:inline-block;border:2px solid;border-radius:20px;padding:.25rem .8rem;
+    font-size:.8rem;font-weight:700;margin:.5rem 0 .8rem}
+  .instruction{text-align:center;font-size:1rem;font-weight:700;color:#4f46e5;
+    background:#ede9fe;border-radius:12px;padding:.55rem .8rem;margin-bottom:.9rem;
+    animation:pulse-inst 1.2s ease-in-out infinite}
+  @keyframes pulse-inst{0%,100%{opacity:1}50%{opacity:.65}}
+  .vs-area{display:flex;align-items:stretch;gap:.6rem;justify-content:center;flex-wrap:wrap}
+  .poke-card{flex:1;min-width:140px;max-width:220px;background:var(--card);border-radius:18px;
+    border:3px solid var(--border);padding:1rem .7rem .8rem;text-align:center;
+    box-shadow:var(--sh);position:relative;transition:border-color .2s,transform .2s,box-shadow .2s}
+  .poke-card.correct{border-color:var(--up)!important;background:#f0fdf4!important;
+    animation:pop .35s;box-shadow:0 0 22px #05966944!important}
+  .poke-card.wrong{border-color:var(--dn)!important;background:#fef2f2!important;animation:shake .35s}
+  .poke-card.dimmed{opacity:.38;filter:grayscale(.6)}
+  @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+  .sprite-ring{width:90px;height:90px;border-radius:50%;background:#f1f5f9;margin:0 auto .5rem;
+    overflow:hidden;display:flex;align-items:center;justify-content:center;border:2px solid var(--border)}
+  .sprite-ring img{width:82px;height:82px;object-fit:contain;image-rendering:pixelated}
+  .poke-name{font-size:.95rem;font-weight:700;min-height:1.5em}
+  .spd-display{font-size:2.1rem;font-weight:900;color:#6366f1;line-height:1.2;min-height:2.6rem;margin:.15rem 0 .6rem}
+  .spd-display.ok-color{color:var(--up)}
+  .spd-display.ng-color{color:#94a3b8}
+  .pick-btn{width:100%;border:none;border-radius:12px;padding:.55rem .4rem;font-size:.92rem;
+    font-weight:800;cursor:pointer;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;
+    box-shadow:0 3px 10px #6366f122;transition:.15s;letter-spacing:.02em}
+  .pick-btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px #6366f133}
+  .pick-btn:active{transform:scale(.97)}
+  .pick-btn.hidden{visibility:hidden}
+  .vs-badge{font-size:1.5rem;font-weight:900;color:#cbd5e1;align-self:center;flex-shrink:0}
+  .next-btn{display:block;width:100%;margin:1rem 0 0;background:#fff;color:#6366f1;
+    border:2px solid #6366f1;border-radius:14px;padding:.75rem;font-size:.95rem;
+    font-weight:700;cursor:pointer;transition:.15s}
+  .next-btn:hover{background:#ede9fe}
+  .info-wrap{margin-top:1rem;display:flex;flex-direction:column;gap:.65rem;animation:fadeUp .35s}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .result-msg{text-align:center;font-size:1.5rem;font-weight:800;padding:.4rem}
+  .info-block{background:var(--card);border-radius:14px;border:1px solid var(--border);
+    padding:.8rem 1rem;box-shadow:0 2px 6px #0001}
+  .info-hd{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.05em;margin-bottom:.45rem}
+  .spd-cmp{display:flex;flex-direction:column;gap:.4rem}
+  .spd-row{display:flex;align-items:center;gap:.45rem;font-size:.84rem}
+  .spd-row .pn{width:76px;font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;flex-shrink:0}
+  .spd-bar-bg{flex:1;height:9px;background:#f1f5f9;border-radius:5px;overflow:hidden}
+  .spd-bar{height:100%;border-radius:5px}
+  .spd-val{width:26px;text-align:right;font-weight:700;font-size:.84rem;flex-shrink:0}
+  .pri-list{display:flex;flex-wrap:wrap;gap:.3rem}
+  .pri-chip{display:inline-flex;align-items:center;gap:3px;background:#fff7ed;
+    border:1px solid #fed7aa;border-radius:6px;padding:2px 7px;font-size:.78rem}
+  .pri-chip b{color:#ea580c}
+  .info-2col{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+  .info-col{display:flex;flex-direction:column;gap:.5rem}
+  .info-col .info-block{padding:.6rem .7rem}
+  .col-lbl{font-size:.76rem;font-weight:800;color:#6366f1;text-align:center;
+    padding:.15rem 0 .35rem;border-bottom:2px solid #e0e7ff;margin-bottom:.1rem}
+  .vs-col{display:flex;flex-direction:column;align-items:center;gap:.5rem;align-self:center;flex-shrink:0}
+  .tie-btn{border:2px solid #94a3b8;border-radius:14px;padding:.4rem .75rem;font-size:.82rem;
+    font-weight:700;cursor:pointer;background:#f8fafc;color:#64748b;transition:.15s;white-space:nowrap}
+  .tie-btn:hover{background:#e2e8f0;border-color:#64748b}
+  .tie-btn.selected{background:#6366f1;border-color:#6366f1;color:#fff}
+  .tie-btn.hidden{visibility:hidden}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Main Nav ── -->
+<nav class="main-nav">
+  <span class="site-title">⚡ 寶可夢速度工具</span>
+  <div class="app-tabs">
+    <button class="app-tab active" data-app="chart" onclick="switchApp('chart')">📊 速度排名</button>
+    <button class="app-tab" data-app="quiz" onclick="switchApp('quiz')">🎮 速度猜謎</button>
+  </div>
+</nav>
+
+<!-- ══════════ CHART APP ══════════ -->
+<div id="chart-app">
+
+<div class="hd">
+  <h1>⚡ <span id="mode-hd">單打前 50</span> 使用率 × 速度線</h1>
+  <p>資料更新 2026-06-24 · 來源：GameWith × victorpoke-champions.com</p>
+  <div class="mode-wrap">
+    <button class="mode-btn on" data-m="s" onclick="switchMode('s')">⚔️ 單打</button>
+    <button class="mode-btn" data-m="d" onclick="switchMode('d')">🤝 雙打</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-hd">
+    <h2>📊 速度分布圖</h2>
+    <span style="font-size:.74rem;color:var(--muted);margin-right:auto">（點擊精靈可高亮 · 左右滑動）</span>
+    <div class="legend">
+      <div class="leg"><div class="lc" style="background:#7c3aed"></div>極快≥120</div>
+      <div class="leg"><div class="lc" style="background:#2563eb"></div>高速110–119</div>
+      <div class="leg"><div class="lc" style="background:#059669"></div>快速100–109</div>
+      <div class="leg"><div class="lc" style="background:#d97706"></div>中速85–99</div>
+      <div class="leg"><div class="lc" style="background:#dc2626"></div>慢速&lt;85</div>
+      <div class="leg"><div class="lu"></div>Mega↑</div>
+      <div class="leg"><div class="ld"></div>Mega↓</div>
+      <div class="leg"><span style="background:#ea580c;color:#fff;font-size:8px;font-weight:800;padding:1px 5px;border-radius:4px">先制</span>有先制招</div>
+    </div>
+  </div>
+  <div class="cv-scroll">
+    <div class="cv-wrap" id="cvWrap"><canvas id="cv"></canvas><div class="sp-overlay" id="overlay"></div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-hd">
+    <h2>🎮 詳細資料</h2>
+    <div class="filters" style="flex:1;border:none;padding:.1rem 0;background:transparent">
+      <span class="fl">基速 ≥ <b id="sv">0</b></span>
+      <input type="range" id="sf" min="0" max="135" step="5" value="0">
+      <select id="tf"><option value="">所有屬性</option></select>
+      <button class="tbtn" id="mb">⭐ 有 Mega</button>
+    </div>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th class="rk" data-k="rank">排名</th><th></th>
+        <th data-k="chinese_name">寶可夢</th>
+        <th>屬性</th>
+        <th data-k="base_spd" class="sc">基速</th>
+        <th class="sc">無努力</th>
+        <th class="sc">滿速</th>
+        <th data-k="extreme" class="sc">急速</th>
+        <th id="th-bring" data-k="bring_rate" class="sc" style="display:none">帶入率</th>
+        <th>先制招</th>
+      </tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+    <div id="nr" class="none" style="display:none">沒有符合條件的寶可夢 🙁</div>
+  </div>
+</div>
+
+</div><!-- #chart-app -->
+
+<!-- ══════════ QUIZ APP ══════════ -->
+<div id="quiz-app" style="display:none">
+
+<div class="hd">
+  <h1>⚡ 速度猜謎</h1>
+  <p>猜猜哪隻寶可夢的基礎速度比較快！（共 74 隻）</p>
+</div>
+
+<div class="tabs" id="q-tabs">
+  <button class="tab active" data-role="">🎲 隨機</button>
+  <button class="tab" data-role="lead">⚡ 起點型</button>
+  <button class="tab" data-role="attacker">⚔️ 攻擊手</button>
+  <button class="tab" data-role="tank">🛡️ 坦克型</button>
+  <button id="hardBtn" class="hard-btn" onclick="toggleHard()">🔥 困難模式</button>
+</div>
+
+<div class="score-bar">
+  <span id="scoreDisp">答對 <b>0</b> / 共 <b>0</b> 題</span>
+  <span class="streak" id="streakDisp"></span>
+</div>
+
+<div class="wrap">
+  <div class="role-label" id="roleLabel">&nbsp;</div>
+  <div class="instruction" id="hint">👇 點「選這隻！」來猜誰比較快！</div>
+
+  <div class="vs-area">
+    <div class="poke-card" id="cardA">
+      <div class="sprite-ring"><img id="imgA" src="" alt="" onerror="this.style.opacity=.15"></div>
+      <div class="poke-name" id="nameA">—</div>
+      <div class="spd-display" id="spdA">?</div>
+      <button class="pick-btn" id="btnA" onclick="pick('A')">選這隻！</button>
+    </div>
+    <div class="vs-col">
+      <div class="vs-badge">VS</div>
+      <button class="tie-btn" id="tieBtn" onclick="pick('TIE')">🤝 平手</button>
+    </div>
+    <div class="poke-card" id="cardB">
+      <div class="sprite-ring"><img id="imgB" src="" alt="" onerror="this.style.opacity=.15"></div>
+      <div class="poke-name" id="nameB">—</div>
+      <div class="spd-display" id="spdB">?</div>
+      <button class="pick-btn" id="btnB" onclick="pick('B')">選這隻！</button>
+    </div>
+  </div>
+
+  <div id="infoWrap"></div>
+  <button class="next-btn" id="nextBtn" onclick="nextQ()" style="display:none">下一題 →</button>
+</div>
+
+</div><!-- #quiz-app -->
+
+<script>
+/* ── App Switch ── */
+function switchApp(app) {
+  document.getElementById('chart-app').style.display = app==='chart' ? 'block' : 'none';
+  document.getElementById('quiz-app').style.display  = app==='quiz'  ? 'block' : 'none';
+  document.querySelectorAll('.app-tab').forEach(t => t.classList.toggle('active', t.dataset.app===app));
+}
+
+/* ════════════════════ CHART JS ════════════════════ */
+const D_S=[{"singles_rank": 1, "id": "garchomp", "chinese_name": "烈咬陸鯊", "display_name": "Garchomp", "types": ["dragon", "ground"], "base_spd": 102, "no_ev": 122, "max_spd": 154, "extreme": 169, "sprite": "https://play.pokemonshowdown.com/sprites/home/garchomp.png", "megas": [{"apiName": "garchomp-mega", "chineseName": "超級烈咬陸鯊", "speed": 92, "extreme": 158, "delta": -10, "sprite": "https://play.pokemonshowdown.com/sprites/dex/garchompmega.png"}], "has_mega": true, "dex": 445, "priority": []}, {"singles_rank": 2, "id": "mimikyu-disguised", "chinese_name": "謎擬Ｑ", "display_name": "Mimikyu", "types": ["ghost", "fairy"], "base_spd": 96, "no_ev": 116, "max_spd": 148, "extreme": 162, "sprite": "https://play.pokemonshowdown.com/sprites/home/mimikyu.png", "megas": [], "has_mega": false, "dex": 778, "priority": []}, {"singles_rank": 3, "id": "archaludon", "chinese_name": "鋁鋼橋龍", "display_name": "Archaludon", "types": ["steel", "dragon"], "base_spd": 85, "no_ev": 105, "max_spd": 137, "extreme": 150, "sprite": "https://play.pokemonshowdown.com/sprites/home/archaludon.png", "megas": [], "has_mega": false, "dex": 1018, "priority": []}, {"singles_rank": 4, "id": "meowscarada", "chinese_name": "魔幻假面喵", "display_name": "Meowscarada", "types": ["grass", "dark"], "base_spd": 123, "no_ev": 143, "max_spd": 175, "extreme": 192, "sprite": "https://play.pokemonshowdown.com/sprites/home/meowscarada.png", "megas": [], "has_mega": false, "dex": 908, "priority": []}, {"singles_rank": 5, "id": "raichu", "chinese_name": "雷丘", "display_name": "Raichu", "types": ["electric"], "base_spd": 110, "no_ev": 130, "max_spd": 162, "extreme": 178, "sprite": "https://play.pokemonshowdown.com/sprites/home/raichu.png", "megas": [{"apiName": "raichu-mega-x", "chineseName": "超級雷丘Ｘ", "speed": 110, "extreme": 178, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/dex/raichumegax.png"}, {"apiName": "raichu-mega-y", "chineseName": "超級雷丘Ｙ", "speed": 130, "extreme": 200, "delta": 20, "sprite": "https://play.pokemonshowdown.com/sprites/dex/raichumegay.png"}], "has_mega": true, "dex": 26, "priority": [["電光石火", "+1"]]}, {"singles_rank": 6, "id": "metagross", "chinese_name": "巨金怪", "display_name": "Metagross", "types": ["steel", "psychic"], "base_spd": 70, "no_ev": 90, "max_spd": 122, "extreme": 134, "sprite": "https://play.pokemonshowdown.com/sprites/home/metagross.png", "megas": [{"apiName": "metagross-mega", "chineseName": "超級巨金怪", "speed": 110, "extreme": 178, "delta": 40, "sprite": "https://play.pokemonshowdown.com/sprites/dex/metagrossmega.png"}], "has_mega": true, "dex": 376, "priority": [["子彈拳", "+1"]]}, {"singles_rank": 7, "id": "staraptor", "chinese_name": "姆克鷹", "display_name": "Staraptor", "types": ["normal", "flying"], "base_spd": 100, "no_ev": 120, "max_spd": 152, "extreme": 167, "sprite": "https://play.pokemonshowdown.com/sprites/home/staraptor.png", "megas": [{"apiName": "staraptor-mega", "chineseName": "超級姆克鷹", "speed": 110, "extreme": 178, "delta": 10, "sprite": "https://play.pokemonshowdown.com/sprites/dex/staraptormega.png"}], "has_mega": true, "dex": 398, "priority": []}, {"singles_rank": 8, "id": "charizard", "chinese_name": "噴火龍", "display_name": "Charizard", "types": ["fire", "flying"], "base_spd": 100, "no_ev": 120, "max_spd": 152, "extreme": 167, "sprite": "https://play.pokemonshowdown.com/sprites/home/charizard.png", "megas": [{"apiName": "charizard-mega-x", "chineseName": "超級噴火龍Ｘ", "speed": 100, "extreme": 167, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/dex/charizardmegax.png"}, {"apiName": "charizard-mega-y", "chineseName": "超級噴火龍Ｙ", "speed": 100, "extreme": 167, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/dex/charizardmegay.png"}], "has_mega": true, "dex": 6, "priority": []}, {"singles_rank": 9, "id": "corviknight", "chinese_name": "鋼鎧鴉", "display_name": "Corviknight", "types": ["flying", "steel"], "base_spd": 67, "no_ev": 87, "max_spd": 119, "extreme": 130, "sprite": "https://play.pokemonshowdown.com/sprites/home/corviknight.png", "megas": [], "has_mega": false, "dex": 823, "priority": []}, {"singles_rank": 10, "id": "swampert", "chinese_name": "巨沼怪", "display_name": "Swampert", "types": ["water", "ground"], "base_spd": 60, "no_ev": 80, "max_spd": 112, "extreme": 123, "sprite": "https://play.pokemonshowdown.com/sprites/home/swampert.png", "megas": [{"apiName": "swampert-mega", "chineseName": "超級巨沼怪", "speed": 70, "extreme": 134, "delta": 10, "sprite": "https://play.pokemonshowdown.com/sprites/dex/swampertmega.png"}], "has_mega": true, "dex": 260, "priority": []}, {"singles_rank": 11, "id": "blaziken", "chinese_name": "火焰雞", "display_name": "Blaziken", "types": ["fire", "fighting"], "base_spd": 80, "no_ev": 100, "max_spd": 132, "extreme": 145, "sprite": "https://play.pokemonshowdown.com/sprites/home/blaziken.png", "megas": [{"apiName": "blaziken-mega", "chineseName": "超級火焰雞", "speed": 100, "extreme": 167, "delta": 20, "sprite": "https://play.pokemonshowdown.com/sprites/dex/blazikenmega.png"}], "has_mega": true, "dex": 257, "priority": [["假哭", "+3"], ["真空掌", "+1"]]}, {"singles_rank": 12, "id": "basculegion-male", "chinese_name": "幽尾玄魚 (雄性的樣子)", "display_name": "Basculegion (Male)", "types": ["water", "ghost"], "base_spd": 78, "no_ev": 98, "max_spd": 130, "extreme": 143, "sprite": "https://play.pokemonshowdown.com/sprites/home/basculegion.png", "megas": [], "has_mega": false, "dex": 902, "priority": [["水流噴射", "+1"]]}, {"singles_rank": 13, "id": "palafin-zero", "chinese_name": "海豚俠", "display_name": "Palafin", "types": ["water"], "base_spd": 100, "no_ev": 120, "max_spd": 152, "extreme": 167, "sprite": "https://play.pokemonshowdown.com/sprites/home/palafin.png", "megas": [], "has_mega": false, "dex": 964, "priority": []}, {"singles_rank": 14, "id": "ninetales-alola", "chinese_name": "九尾 (阿羅拉的樣子)", "display_name": "Ninetales (Alolan Form)", "types": ["ice", "fairy"], "base_spd": 109, "no_ev": 129, "max_spd": 161, "extreme": 177, "sprite": "https://play.pokemonshowdown.com/sprites/home/ninetales-alola.png", "megas": [], "has_mega": false, "dex": 38, "priority": []}, {"singles_rank": 15, "id": "gyarados", "chinese_name": "暴鯉龍", "display_name": "Gyarados", "types": ["water", "flying"], "base_spd": 81, "no_ev": 101, "max_spd": 133, "extreme": 146, "sprite": "https://play.pokemonshowdown.com/sprites/home/gyarados.png", "megas": [{"apiName": "gyarados-mega", "chineseName": "超級暴鯉龍", "speed": 81, "extreme": 146, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/dex/gyaradosmega.png"}], "has_mega": true, "dex": 130, "priority": []}, {"singles_rank": 16, "id": "pelipper", "chinese_name": "大嘴鷗", "display_name": "Pelipper", "types": ["water", "flying"], "base_spd": 65, "no_ev": 85, "max_spd": 117, "extreme": 128, "sprite": "https://play.pokemonshowdown.com/sprites/home/pelipper.png", "megas": [], "has_mega": false, "dex": 279, "priority": []}, {"singles_rank": 17, "id": "glimmora", "chinese_name": "晶光花", "display_name": "Glimmora", "types": ["rock", "poison"], "base_spd": 86, "no_ev": 106, "max_spd": 138, "extreme": 151, "sprite": "https://play.pokemonshowdown.com/sprites/home/glimmora.png", "megas": [{"apiName": "glimmora-mega", "chineseName": "超級晶光花", "speed": 101, "extreme": 168, "delta": 15, "sprite": "https://play.pokemonshowdown.com/sprites/dex/glimmoramega.png"}], "has_mega": true, "dex": 970, "priority": []}, {"singles_rank": 18, "id": "grimmsnarl", "chinese_name": "長毛巨魔", "display_name": "Grimmsnarl", "types": ["dark", "fairy"], "base_spd": 60, "no_ev": 80, "max_spd": 112, "extreme": 123, "sprite": "https://play.pokemonshowdown.com/sprites/home/grimmsnarl.png", "megas": [], "has_mega": false, "dex": 861, "priority": []}, {"singles_rank": 19, "id": "hydreigon", "chinese_name": "三首惡龍", "display_name": "Hydreigon", "types": ["dark", "dragon"], "base_spd": 98, "no_ev": 118, "max_spd": 150, "extreme": 165, "sprite": "https://play.pokemonshowdown.com/sprites/home/hydreigon.png", "megas": [], "has_mega": false, "dex": 635, "priority": []}, {"singles_rank": 20, "id": "dragonite", "chinese_name": "快龍", "display_name": "Dragonite", "types": ["dragon", "flying"], "base_spd": 80, "no_ev": 100, "max_spd": 132, "extreme": 145, "sprite": "https://play.pokemonshowdown.com/sprites/home/dragonite.png", "megas": [{"apiName": "dragonite-mega", "chineseName": "超級快龍", "speed": 100, "extreme": 167, "delta": 20, "sprite": "https://play.pokemonshowdown.com/sprites/dex/dragonitemega.png"}], "has_mega": true, "dex": 149, "priority": [["神速", "+2"]]}, {"singles_rank": 21, "id": "rotom-wash", "chinese_name": "洛托姆 (清洗洛托姆)", "display_name": "Rotom (Wash Rotom)", "types": ["electric", "water"], "base_spd": 86, "no_ev": 106, "max_spd": 138, "extreme": 151, "sprite": "https://play.pokemonshowdown.com/sprites/home/rotom-wash.png", "megas": [], "has_mega": false, "dex": 479, "priority": []}, {"singles_rank": 22, "id": "gholdengo", "chinese_name": "賽富豪", "display_name": "Gholdengo", "types": ["steel", "ghost"], "base_spd": 84, "no_ev": 104, "max_spd": 136, "extreme": 149, "sprite": "https://play.pokemonshowdown.com/sprites/home/gholdengo.png", "megas": [], "has_mega": false, "dex": 1000, "priority": []}, {"singles_rank": 23, "id": "kingambit", "chinese_name": "仆斬將軍", "display_name": "Kingambit", "types": ["dark", "steel"], "base_spd": 50, "no_ev": 70, "max_spd": 102, "extreme": 112, "sprite": "https://play.pokemonshowdown.com/sprites/home/kingambit.png", "megas": [], "has_mega": false, "dex": 983, "priority": [["突襲", "+1"]]}, {"singles_rank": 24, "id": "mawile", "chinese_name": "大嘴娃", "display_name": "Mawile", "types": ["steel", "fairy"], "base_spd": 50, "no_ev": 70, "max_spd": 102, "extreme": 112, "sprite": "https://play.pokemonshowdown.com/sprites/home/mawile.png", "megas": [{"apiName": "mawile-mega", "chineseName": "超級大嘴娃", "speed": 50, "extreme": 112, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/dex/mawilemega.png"}], "has_mega": true, "dex": 303, "priority": [["突襲", "+1"]]}, {"singles_rank": 25, "id": "krookodile", "chinese_name": "流氓鱷", "display_name": "Krookodile", "types": ["ground", "dark"], "base_spd": 92, "no_ev": 112, "max_spd": 144, "extreme": 158, "sprite": "https://play.pokemonshowdown.com/sprites/home/krookodile.png", "megas": [], "has_mega": false, "dex": 553, "priority": []}, {"singles_rank": 26, "id": "hatterene", "chinese_name": "布莉姆溫", "display_name": "Hatterene", "types": ["psychic", "fairy"], "base_spd": 29, "no_ev": 49, "max_spd": 81, "extreme": 89, "sprite": "https://play.pokemonshowdown.com/sprites/home/hatterene.png", "megas": [], "has_mega": false, "dex": 858, "priority": []}, {"singles_rank": 27, "id": "toxapex", "chinese_name": "超壞星", "display_name": "Toxapex", "types": ["poison", "water"], "base_spd": 35, "no_ev": 55, "max_spd": 87, "extreme": 95, "sprite": "https://play.pokemonshowdown.com/sprites/home/toxapex.png", "megas": [], "has_mega": false, "dex": 748, "priority": []}, {"singles_rank": 28, "id": "gengar", "chinese_name": "耿鬼", "display_name": "Gengar", "types": ["ghost", "poison"], "base_spd": 110, "no_ev": 130, "max_spd": 162, "extreme": 178, "sprite": "https://play.pokemonshowdown.com/sprites/home/gengar.png", "megas": [{"apiName": "gengar-mega", "chineseName": "超級耿鬼", "speed": 130, "extreme": 200, "delta": 20, "sprite": "https://play.pokemonshowdown.com/sprites/dex/gengarmega.png"}], "has_mega": true, "dex": 94, "priority": [["影子偷襲", "+1"]]}, {"singles_rank": 29, "id": "greninja", "chinese_name": "甲賀忍蛙", "display_name": "Greninja", "types": ["water", "dark"], "base_spd": 122, "no_ev": 142, "max_spd": 174, "extreme": 191, "sprite": "https://play.pokemonshowdown.com/sprites/home/greninja.png", "megas": [{"apiName": "greninja-mega", "chineseName": "超級甲賀忍蛙", "speed": 142, "extreme": 213, "delta": 20, "sprite": "https://play.pokemonshowdown.com/sprites/dex/greninjamega.png"}], "has_mega": true, "dex": 658, "priority": []}, {"singles_rank": 30, "id": "scizor", "chinese_name": "巨鉗螳螂", "display_name": "Scizor", "types": ["bug", "steel"], "base_spd": 65, "no_ev": 85, "max_spd": 117, "extreme": 128, "sprite": "https://play.pokemonshowdown.com/sprites/home/scizor.png", "megas": [{"apiName": "scizor-mega", "chineseName": "超級巨鉗螳螂", "speed": 75, "extreme": 139, "delta": 10, "sprite": "https://play.pokemonshowdown.com/sprites/dex/scizormega.png"}], "has_mega": true, "dex": 212, "priority": [["子彈拳", "+1"]]}, {"singles_rank": 31, "id": "volcarona", "chinese_name": "火神蛾", "display_name": "Volcarona", "types": ["bug", "fire"], "base_spd": 100, "no_ev": 120, "max_spd": 152, "extreme": 167, "sprite": "https://play.pokemonshowdown.com/sprites/home/volcarona.png", "megas": [], "has_mega": false, "dex": 637, "priority": []}, {"singles_rank": 32, "id": "cetitan", "chinese_name": "雙倍多多冰", "display_name": "cetitan", "types": ["ice"], "base_spd": 36, "no_ev": 56, "max_spd": 88, "extreme": 96, "sprite": "https://play.pokemonshowdown.com/sprites/home/cetitan.png", "megas": [], "has_mega": false, "dex": 976, "priority": [["冰矢", "+1"]]}, {"singles_rank": 33, "id": "lopunny", "chinese_name": "長耳兔", "display_name": "Lopunny", "types": ["normal"], "base_spd": 105, "no_ev": 125, "max_spd": 157, "extreme": 172, "sprite": "https://play.pokemonshowdown.com/sprites/home/lopunny.png", "megas": [{"apiName": "lopunny-mega", "chineseName": "超級長耳兔", "speed": 135, "extreme": 205, "delta": 30, "sprite": "https://play.pokemonshowdown.com/sprites/dex/lopunnymega.png"}], "has_mega": true, "dex": 428, "priority": [["假哭", "+3"], ["電光石火", "+1"]]}, {"singles_rank": 34, "id": "starmie", "chinese_name": "寶石海星", "display_name": "Starmie", "types": ["water", "psychic"], "base_spd": 115, "no_ev": 135, "max_spd": 167, "extreme": 183, "sprite": "https://play.pokemonshowdown.com/sprites/home/starmie.png", "megas": [{"apiName": "starmie-mega", "chineseName": "超級寶石海星", "speed": 120, "extreme": 189, "delta": 5, "sprite": "https://play.pokemonshowdown.com/sprites/dex/starmiemega.png"}], "has_mega": true, "dex": 121, "priority": []}, {"singles_rank": 35, "id": "meganium", "chinese_name": "大竺葵", "display_name": "Meganium", "types": ["grass"], "base_spd": 80, "no_ev": 100, "max_spd": 132, "extreme": 145, "sprite": "https://play.pokemonshowdown.com/sprites/home/meganium.png", "megas": [{"apiName": "meganium-mega", "chineseName": "超級大竺葵", "speed": 80, "extreme": 145, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/dex/meganiummega.png"}], "has_mega": true, "dex": 154, "priority": []}, {"singles_rank": 36, "id": "armarouge", "chinese_name": "紅蓮鎧騎", "display_name": "Armarouge", "types": ["fire", "psychic"], "base_spd": 75, "no_ev": 95, "max_spd": 127, "extreme": 139, "sprite": "https://play.pokemonshowdown.com/sprites/home/armarouge.png", "megas": [], "has_mega": false, "dex": 936, "priority": []}, {"singles_rank": 37, "id": "doublade", "chinese_name": "洗翠大劍鬼", "display_name": "doublade", "types": ["steel", "ghost"], "base_spd": 35, "no_ev": 55, "max_spd": 87, "extreme": 95, "sprite": "https://play.pokemonshowdown.com/sprites/home/doublade.png", "megas": [], "has_mega": false, "dex": 680, "priority": [["影子偷襲", "+1"]]}, {"singles_rank": 38, "id": "umbreon", "chinese_name": "月亮伊布", "display_name": "Umbreon", "types": ["dark"], "base_spd": 65, "no_ev": 85, "max_spd": 117, "extreme": 128, "sprite": "https://play.pokemonshowdown.com/sprites/home/umbreon.png", "megas": [], "has_mega": false, "dex": 197, "priority": []}, {"singles_rank": 39, "id": "weavile", "chinese_name": "瑪狃拉", "display_name": "Weavile", "types": ["dark", "ice"], "base_spd": 125, "no_ev": 145, "max_spd": 177, "extreme": 194, "sprite": "https://play.pokemonshowdown.com/sprites/home/weavile.png", "megas": [], "has_mega": false, "dex": 461, "priority": [["冰矢", "+1"], ["突襲", "+1"]]}, {"singles_rank": 40, "id": "venusaur", "chinese_name": "妙蛙花", "display_name": "Venusaur", "types": ["grass", "poison"], "base_spd": 80, "no_ev": 100, "max_spd": 132, "extreme": 145, "sprite": "https://play.pokemonshowdown.com/sprites/home/venusaur.png", "megas": [{"apiName": "venusaur-mega", "chineseName": "超級妙蛙花", "speed": 80, "extreme": 145, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/dex/venusaurmega.png"}], "has_mega": true, "dex": 3, "priority": []}, {"singles_rank": 41, "id": "blastoise", "chinese_name": "水箭龜", "display_name": "Blastoise", "types": ["water"], "base_spd": 78, "no_ev": 98, "max_spd": 130, "extreme": 143, "sprite": "https://play.pokemonshowdown.com/sprites/home/blastoise.png", "megas": [{"apiName": "blastoise-mega", "chineseName": "超級水箭龜", "speed": 78, "extreme": 143, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/dex/blastoisemega.png"}], "has_mega": true, "dex": 9, "priority": []}, {"singles_rank": 42, "id": "lucario", "chinese_name": "路卡利歐", "display_name": "Lucario", "types": ["fighting", "steel"], "base_spd": 90, "no_ev": 110, "max_spd": 142, "extreme": 156, "sprite": "https://play.pokemonshowdown.com/sprites/home/lucario.png", "megas": [{"apiName": "lucario-mega", "chineseName": "超級路卡利歐", "speed": 112, "extreme": 180, "delta": 22, "sprite": "https://play.pokemonshowdown.com/sprites/dex/lucariomega.png"}], "has_mega": true, "dex": 448, "priority": [["子彈拳", "+1"], ["神速", "+2"]]}, {"singles_rank": 43, "id": "annihilape", "chinese_name": "棄世猴", "display_name": "Annihilape", "types": ["fighting", "ghost"], "base_spd": 90, "no_ev": 110, "max_spd": 142, "extreme": 156, "sprite": "https://play.pokemonshowdown.com/sprites/home/annihilape.png", "megas": [], "has_mega": false, "dex": 979, "priority": [["突襲", "+1"]]}, {"singles_rank": 44, "id": "sylveon", "chinese_name": "仙子伊布", "display_name": "Sylveon", "types": ["fairy"], "base_spd": 60, "no_ev": 80, "max_spd": 112, "extreme": 123, "sprite": "https://play.pokemonshowdown.com/sprites/home/sylveon.png", "megas": [], "has_mega": false, "dex": 700, "priority": []}, {"singles_rank": 45, "id": "mamoswine", "chinese_name": "象牙豬", "display_name": "Mamoswine", "types": ["ice", "ground"], "base_spd": 80, "no_ev": 100, "max_spd": 132, "extreme": 145, "sprite": "https://play.pokemonshowdown.com/sprites/home/mamoswine.png", "megas": [], "has_mega": false, "dex": 473, "priority": [["冰矢", "+1"]]}, {"singles_rank": 46, "id": "rotom-heat", "chinese_name": "洛托姆 (加熱洛托姆)", "display_name": "Rotom (Heat Rotom)", "types": ["electric", "fire"], "base_spd": 86, "no_ev": 106, "max_spd": 138, "extreme": 151, "sprite": "https://play.pokemonshowdown.com/sprites/home/rotom-heat.png", "megas": [], "has_mega": false, "dex": 479, "priority": []}, {"singles_rank": 47, "id": "electivire", "chinese_name": "電肚蛙", "display_name": "electivire", "types": ["electric"], "base_spd": 95, "no_ev": 115, "max_spd": 147, "extreme": 161, "sprite": "https://play.pokemonshowdown.com/sprites/home/electivire.png", "megas": [], "has_mega": false, "dex": 466, "priority": []}, {"singles_rank": 48, "id": "floette-eternal", "chinese_name": "永恆之花花葉蒂", "display_name": "Floette (Eternal Flower)", "types": ["fairy"], "base_spd": 92, "no_ev": 112, "max_spd": 144, "extreme": 158, "sprite": "https://play.pokemonshowdown.com/sprites/dex/floette-eternal.png", "megas": [], "has_mega": false, "dex": 670, "priority": []}, {"singles_rank": 49, "id": "hitmonlee", "chinese_name": "巨飛腿郎", "display_name": "hitmonlee", "types": ["fighting"], "base_spd": 87, "no_ev": 107, "max_spd": 139, "extreme": 152, "sprite": "https://play.pokemonshowdown.com/sprites/home/hitmonlee.png", "megas": [], "has_mega": false, "dex": 106, "priority": [["假哭", "+3"]]}, {"singles_rank": 50, "id": "hitmonchan", "chinese_name": "戰舞郎", "display_name": "hitmonchan", "types": ["fighting"], "base_spd": 76, "no_ev": 96, "max_spd": 128, "extreme": 140, "sprite": "https://play.pokemonshowdown.com/sprites/home/hitmonchan.png", "megas": [], "has_mega": false, "dex": 107, "priority": [["假哭", "+3"], ["真空掌", "+1"]]}];
+const D_D=[{"doubles_rank": 1, "bring_rate": 38.9, "id": "garchomp", "chinese_name": "烈咬陸鯊", "display_name": "Garchomp", "types": ["dragon", "ground"], "base_spd": 102, "no_ev": 122, "max_spd": 154, "extreme": 169, "sprite": "https://play.pokemonshowdown.com/sprites/home/garchomp.png", "megas": [{"apiName": "garchomp-mega", "chineseName": "超級烈咬陸鯊", "speed": 92, "extreme": 158, "delta": -10, "sprite": "https://play.pokemonshowdown.com/sprites/home/garchompmega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 2, "bring_rate": 34.4, "id": "basculegion-male", "chinese_name": "幽尾玄魚 (雄性的樣子)", "display_name": "Basculegion (Male)", "types": ["water", "ghost"], "base_spd": 78, "no_ev": 98, "max_spd": 130, "extreme": 143, "sprite": "https://play.pokemonshowdown.com/sprites/home/basculegion.png", "megas": [], "has_mega": false, "priority": [["水流噴射", "+1"]]}, {"doubles_rank": 3, "bring_rate": 33.8, "id": "sinistcha", "chinese_name": "來悲粗茶", "display_name": "Sinistcha", "types": ["grass", "ghost"], "base_spd": 70, "no_ev": 90, "max_spd": 122, "extreme": 134, "sprite": "https://play.pokemonshowdown.com/sprites/home/sinistcha.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 4, "bring_rate": 29.3, "id": "incineroar", "chinese_name": "熾焰咆哮虎", "display_name": "Incineroar", "types": ["fire", "dark"], "base_spd": 60, "no_ev": 80, "max_spd": 112, "extreme": 123, "sprite": "https://play.pokemonshowdown.com/sprites/home/incineroar.png", "megas": [], "has_mega": false, "priority": [["假哭", "+3"]]}, {"doubles_rank": 5, "bring_rate": 29.2, "id": "whimsicott", "chinese_name": "風妖精", "display_name": "Whimsicott", "types": ["grass", "fairy"], "base_spd": 116, "no_ev": 136, "max_spd": 168, "extreme": 184, "sprite": "https://play.pokemonshowdown.com/sprites/home/whimsicott.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 6, "bring_rate": 26.6, "id": "kingambit", "chinese_name": "仆斬將軍", "display_name": "Kingambit", "types": ["dark", "steel"], "base_spd": 50, "no_ev": 70, "max_spd": 102, "extreme": 112, "sprite": "https://play.pokemonshowdown.com/sprites/home/kingambit.png", "megas": [], "has_mega": false, "priority": [["突襲", "+1"]]}, {"doubles_rank": 7, "bring_rate": 23.6, "id": "charizard", "chinese_name": "噴火龍", "display_name": "Charizard", "types": ["fire", "flying"], "base_spd": 100, "no_ev": 120, "max_spd": 152, "extreme": 167, "sprite": "https://play.pokemonshowdown.com/sprites/home/charizard.png", "megas": [{"apiName": "charizard-mega-x", "chineseName": "超級噴火龍Ｘ", "speed": 100, "extreme": 167, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/home/charizardmegax.png"}, {"apiName": "charizard-mega-y", "chineseName": "超級噴火龍Ｙ", "speed": 100, "extreme": 167, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/home/charizardmegay.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 8, "bring_rate": 21.6, "id": "pelipper", "chinese_name": "大嘴鷗", "display_name": "Pelipper", "types": ["water", "flying"], "base_spd": 65, "no_ev": 85, "max_spd": 117, "extreme": 128, "sprite": "https://play.pokemonshowdown.com/sprites/home/pelipper.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 9, "bring_rate": 19.5, "id": "archaludon", "chinese_name": "鋁鋼橋龍", "display_name": "Archaludon", "types": ["steel", "dragon"], "base_spd": 85, "no_ev": 105, "max_spd": 137, "extreme": 150, "sprite": "https://play.pokemonshowdown.com/sprites/home/archaludon.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 10, "bring_rate": 19.3, "id": "sneasler", "chinese_name": "大狃拉", "display_name": "Sneasler", "types": ["fighting", "poison"], "base_spd": 120, "no_ev": 140, "max_spd": 172, "extreme": 189, "sprite": "https://play.pokemonshowdown.com/sprites/home/sneasler.png", "megas": [], "has_mega": false, "priority": [["突襲", "+1"]]}, {"doubles_rank": 11, "bring_rate": 19.1, "id": "farigiraf", "chinese_name": "奇麒麟", "display_name": "Farigiraf", "types": ["normal", "psychic"], "base_spd": 60, "no_ev": 80, "max_spd": 112, "extreme": 123, "sprite": "https://play.pokemonshowdown.com/sprites/home/farigiraf.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 12, "bring_rate": 18.7, "id": "swampert", "chinese_name": "巨沼怪", "display_name": "Swampert", "types": ["water", "ground"], "base_spd": 60, "no_ev": 80, "max_spd": 112, "extreme": 123, "sprite": "https://play.pokemonshowdown.com/sprites/home/swampert.png", "megas": [{"apiName": "swampert-mega", "chineseName": "超級巨沼怪", "speed": 70, "extreme": 134, "delta": 10, "sprite": "https://play.pokemonshowdown.com/sprites/home/swampertmega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 13, "bring_rate": 18.0, "id": "floette-eternal", "chinese_name": "永恆之花花葉蒂", "display_name": "Floette (Eternal Flower)", "types": ["fairy"], "base_spd": 92, "no_ev": 112, "max_spd": 144, "extreme": 158, "sprite": "https://play.pokemonshowdown.com/sprites/dex/floette-eternal.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 14, "bring_rate": 17.0, "id": "grimmsnarl", "chinese_name": "長毛巨魔", "display_name": "Grimmsnarl", "types": ["dark", "fairy"], "base_spd": 60, "no_ev": 80, "max_spd": 112, "extreme": 123, "sprite": "https://play.pokemonshowdown.com/sprites/home/grimmsnarl.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 15, "bring_rate": 15.7, "id": "metagross", "chinese_name": "巨金怪", "display_name": "Metagross", "types": ["steel", "psychic"], "base_spd": 70, "no_ev": 90, "max_spd": 122, "extreme": 134, "sprite": "https://play.pokemonshowdown.com/sprites/home/metagross.png", "megas": [{"apiName": "metagross-mega", "chineseName": "超級巨金怪", "speed": 110, "extreme": 178, "delta": 40, "sprite": "https://play.pokemonshowdown.com/sprites/home/metagrossmega.png"}], "has_mega": true, "priority": [["子彈拳", "+1"]]}, {"doubles_rank": 16, "bring_rate": 15.5, "id": "sylveon", "chinese_name": "仙子伊布", "display_name": "Sylveon", "types": ["fairy"], "base_spd": 60, "no_ev": 80, "max_spd": 112, "extreme": 123, "sprite": "https://play.pokemonshowdown.com/sprites/home/sylveon.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 17, "bring_rate": 12.9, "id": "aerodactyl", "chinese_name": "化石翼龍", "display_name": "Aerodactyl", "types": ["rock", "flying"], "base_spd": 130, "no_ev": 150, "max_spd": 182, "extreme": 200, "sprite": "https://play.pokemonshowdown.com/sprites/home/aerodactyl.png", "megas": [{"apiName": "aerodactyl-mega", "chineseName": "超級化石翼龍", "speed": 150, "extreme": 222, "delta": 20, "sprite": "https://play.pokemonshowdown.com/sprites/home/aerodactylmega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 18, "bring_rate": 11.7, "id": "gholdengo", "chinese_name": "賽富豪", "display_name": "Gholdengo", "types": ["steel", "ghost"], "base_spd": 84, "no_ev": 104, "max_spd": 136, "extreme": 149, "sprite": "https://play.pokemonshowdown.com/sprites/home/gholdengo.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 19, "bring_rate": 11.3, "id": "raichu", "chinese_name": "雷丘", "display_name": "Raichu", "types": ["electric"], "base_spd": 110, "no_ev": 130, "max_spd": 162, "extreme": 178, "sprite": "https://play.pokemonshowdown.com/sprites/home/raichu.png", "megas": [{"apiName": "raichu-mega-x", "chineseName": "超級雷丘Ｘ", "speed": 110, "extreme": 178, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/home/raichumegax.png"}, {"apiName": "raichu-mega-y", "chineseName": "超級雷丘Ｙ", "speed": 130, "extreme": 200, "delta": 20, "sprite": "https://play.pokemonshowdown.com/sprites/home/raichumegay.png"}], "has_mega": true, "priority": [["電光石火", "+1"]]}, {"doubles_rank": 20, "bring_rate": 11.2, "id": "staraptor", "chinese_name": "姆克鷹", "display_name": "Staraptor", "types": ["normal", "flying"], "base_spd": 100, "no_ev": 120, "max_spd": 152, "extreme": 167, "sprite": "https://play.pokemonshowdown.com/sprites/home/staraptor.png", "megas": [{"apiName": "staraptor-mega", "chineseName": "超級姆克鷹", "speed": 110, "extreme": 178, "delta": 10, "sprite": "https://play.pokemonshowdown.com/sprites/home/staraptormega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 21, "bring_rate": 8.9, "id": "mawile", "chinese_name": "大嘴娃", "display_name": "Mawile", "types": ["steel", "fairy"], "base_spd": 50, "no_ev": 70, "max_spd": 102, "extreme": 112, "sprite": "https://play.pokemonshowdown.com/sprites/home/mawile.png", "megas": [{"apiName": "mawile-mega", "chineseName": "超級大嘴娃", "speed": 50, "extreme": 112, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/home/mawilemega.png"}], "has_mega": true, "priority": [["突襲", "+1"]]}, {"doubles_rank": 22, "bring_rate": 7.5, "id": "torkoal", "chinese_name": "煤炭龜", "display_name": "Torkoal", "types": ["fire"], "base_spd": 20, "no_ev": 40, "max_spd": 72, "extreme": 79, "sprite": "https://play.pokemonshowdown.com/sprites/home/torkoal.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 23, "bring_rate": 7.5, "id": "venusaur", "chinese_name": "妙蛙花", "display_name": "Venusaur", "types": ["grass", "poison"], "base_spd": 80, "no_ev": 100, "max_spd": 132, "extreme": 145, "sprite": "https://play.pokemonshowdown.com/sprites/home/venusaur.png", "megas": [{"apiName": "venusaur-mega", "chineseName": "超級妙蛙花", "speed": 80, "extreme": 145, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/home/venusaurmega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 24, "bring_rate": 6.8, "id": "hydreigon", "chinese_name": "三首惡龍", "display_name": "Hydreigon", "types": ["dark", "dragon"], "base_spd": 98, "no_ev": 118, "max_spd": 150, "extreme": 165, "sprite": "https://play.pokemonshowdown.com/sprites/home/hydreigon.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 25, "bring_rate": 6.4, "id": "delphox", "chinese_name": "妖火紅狐", "display_name": "Delphox", "types": ["fire", "psychic"], "base_spd": 104, "no_ev": 124, "max_spd": 156, "extreme": 171, "sprite": "https://play.pokemonshowdown.com/sprites/home/delphox.png", "megas": [{"apiName": "delphox-mega", "chineseName": "超級妖火紅狐", "speed": 134, "extreme": 204, "delta": 30, "sprite": "https://play.pokemonshowdown.com/sprites/home/delphoxmega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 26, "bring_rate": 5.9, "id": "sableye", "chinese_name": "勾魂眼", "display_name": "Sableye", "types": ["dark", "ghost"], "base_spd": 50, "no_ev": 70, "max_spd": 102, "extreme": 112, "sprite": "https://play.pokemonshowdown.com/sprites/home/sableye.png", "megas": [{"apiName": "sableye-mega", "chineseName": "超級勾魂眼", "speed": 20, "extreme": 79, "delta": -30, "sprite": "https://play.pokemonshowdown.com/sprites/home/sableyemega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 27, "bring_rate": 5.6, "id": "maushold-family-of-four", "chinese_name": "一家鼠", "display_name": "Maushold", "types": ["normal"], "base_spd": 111, "no_ev": 131, "max_spd": 163, "extreme": 179, "sprite": "https://play.pokemonshowdown.com/sprites/home/maushold-four.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 28, "bring_rate": 5.1, "id": "froslass", "chinese_name": "雪妖女", "display_name": "Froslass", "types": ["ice", "ghost"], "base_spd": 110, "no_ev": 130, "max_spd": 162, "extreme": 178, "sprite": "https://play.pokemonshowdown.com/sprites/home/froslass.png", "megas": [{"apiName": "froslass-mega", "chineseName": "超級雪妖女", "speed": 120, "extreme": 189, "delta": 10, "sprite": "https://play.pokemonshowdown.com/sprites/home/froslassmega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 29, "bring_rate": 5.1, "id": "milotic", "chinese_name": "美納斯", "display_name": "Milotic", "types": ["water"], "base_spd": 81, "no_ev": 101, "max_spd": 133, "extreme": 146, "sprite": "https://play.pokemonshowdown.com/sprites/home/milotic.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 30, "bring_rate": 4.7, "id": "pyroar-male", "chinese_name": "火炎獅", "display_name": "Pyroar", "types": ["fire", "normal"], "base_spd": 106, "no_ev": 126, "max_spd": 158, "extreme": 173, "sprite": "https://play.pokemonshowdown.com/sprites/home/pyroar.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 31, "bring_rate": 4.3, "id": "rotom-wash", "chinese_name": "洛托姆 (清洗洛托姆)", "display_name": "Rotom (Wash Rotom)", "types": ["electric", "water"], "base_spd": 86, "no_ev": 106, "max_spd": 138, "extreme": 151, "sprite": "https://play.pokemonshowdown.com/sprites/home/rotom-wash.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 32, "bring_rate": 4.2, "id": "dragonite", "chinese_name": "快龍", "display_name": "Dragonite", "types": ["dragon", "flying"], "base_spd": 80, "no_ev": 100, "max_spd": 132, "extreme": 145, "sprite": "https://play.pokemonshowdown.com/sprites/home/dragonite.png", "megas": [{"apiName": "dragonite-mega", "chineseName": "超級快龍", "speed": 100, "extreme": 167, "delta": 20, "sprite": "https://play.pokemonshowdown.com/sprites/home/dragonitemega.png"}], "has_mega": true, "priority": [["神速", "+2"]]}, {"doubles_rank": 33, "bring_rate": 3.6, "id": "blaziken", "chinese_name": "火焰雞", "display_name": "Blaziken", "types": ["fire", "fighting"], "base_spd": 80, "no_ev": 100, "max_spd": 132, "extreme": 145, "sprite": "https://play.pokemonshowdown.com/sprites/home/blaziken.png", "megas": [{"apiName": "blaziken-mega", "chineseName": "超級火焰雞", "speed": 100, "extreme": 167, "delta": 20, "sprite": "https://play.pokemonshowdown.com/sprites/home/blazikenmega.png"}], "has_mega": true, "priority": [["假哭", "+3"], ["真空掌", "+1"]]}, {"doubles_rank": 34, "bring_rate": 3.6, "id": "scrafty", "chinese_name": "頭巾混混", "display_name": "Scrafty", "types": ["dark", "fighting"], "base_spd": 58, "no_ev": 78, "max_spd": 110, "extreme": 121, "sprite": "https://play.pokemonshowdown.com/sprites/home/scrafty.png", "megas": [{"apiName": "scrafty-mega", "chineseName": "超級頭巾混混", "speed": 68, "extreme": 132, "delta": 10, "sprite": "https://play.pokemonshowdown.com/sprites/home/scraftymega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 35, "bring_rate": 3.5, "id": "ninetales-alola", "chinese_name": "九尾 (阿羅拉的樣子)", "display_name": "Ninetales (Alolan Form)", "types": ["ice", "fairy"], "base_spd": 109, "no_ev": 129, "max_spd": 161, "extreme": 177, "sprite": "https://play.pokemonshowdown.com/sprites/home/ninetales-alola.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 36, "bring_rate": 3.5, "id": "tyranitar", "chinese_name": "班基拉斯", "display_name": "Tyranitar", "types": ["rock", "dark"], "base_spd": 61, "no_ev": 81, "max_spd": 113, "extreme": 124, "sprite": "https://play.pokemonshowdown.com/sprites/home/tyranitar.png", "megas": [{"apiName": "tyranitar-mega", "chineseName": "超級班基拉斯", "speed": 71, "extreme": 135, "delta": 10, "sprite": "https://play.pokemonshowdown.com/sprites/home/tyranitarmega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 37, "bring_rate": 3.2, "id": "kangaskhan", "chinese_name": "袋獸", "display_name": "Kangaskhan", "types": ["normal"], "base_spd": 90, "no_ev": 110, "max_spd": 142, "extreme": 156, "sprite": "https://play.pokemonshowdown.com/sprites/home/kangaskhan.png", "megas": [{"apiName": "kangaskhan-mega", "chineseName": "超級袋獸", "speed": 100, "extreme": 167, "delta": 10, "sprite": "https://play.pokemonshowdown.com/sprites/home/kangaskhanmega.png"}], "has_mega": true, "priority": [["假哭", "+3"]]}, {"doubles_rank": 38, "bring_rate": 3.1, "id": "talonflame", "chinese_name": "烈箭鷹", "display_name": "Talonflame", "types": ["fire", "flying"], "base_spd": 126, "no_ev": 146, "max_spd": 178, "extreme": 195, "sprite": "https://play.pokemonshowdown.com/sprites/home/talonflame.png", "megas": [], "has_mega": false, "priority": [["勇鳥猛撞", "+1"]]}, {"doubles_rank": 39, "bring_rate": 2.9, "id": "annihilape", "chinese_name": "棄世猴", "display_name": "Annihilape", "types": ["fighting", "ghost"], "base_spd": 90, "no_ev": 110, "max_spd": 142, "extreme": 156, "sprite": "https://play.pokemonshowdown.com/sprites/home/annihilape.png", "megas": [], "has_mega": false, "priority": [["突襲", "+1"]]}, {"doubles_rank": 40, "bring_rate": 2.7, "id": "corviknight", "chinese_name": "鋼鎧鴉", "display_name": "Corviknight", "types": ["flying", "steel"], "base_spd": 67, "no_ev": 87, "max_spd": 119, "extreme": 130, "sprite": "https://play.pokemonshowdown.com/sprites/home/corviknight.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 41, "bring_rate": 2.7, "id": "gengar", "chinese_name": "耿鬼", "display_name": "Gengar", "types": ["ghost", "poison"], "base_spd": 110, "no_ev": 130, "max_spd": 162, "extreme": 178, "sprite": "https://play.pokemonshowdown.com/sprites/home/gengar.png", "megas": [{"apiName": "gengar-mega", "chineseName": "超級耿鬼", "speed": 130, "extreme": 200, "delta": 20, "sprite": "https://play.pokemonshowdown.com/sprites/home/gengarmega.png"}], "has_mega": true, "priority": [["影子偷襲", "+1"]]}, {"doubles_rank": 42, "bring_rate": 2.6, "id": "ceruledge", "chinese_name": "蒼炎刃鬼", "display_name": "Ceruledge", "types": ["fire", "ghost"], "base_spd": 85, "no_ev": 105, "max_spd": 137, "extreme": 150, "sprite": "https://play.pokemonshowdown.com/sprites/home/ceruledge.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 43, "bring_rate": 2.5, "id": "scovillain", "chinese_name": "狠辣椒", "display_name": "Scovillain", "types": ["grass", "fire"], "base_spd": 75, "no_ev": 95, "max_spd": 127, "extreme": 139, "sprite": "https://play.pokemonshowdown.com/sprites/home/scovillain.png", "megas": [{"apiName": "scovillain-mega", "chineseName": "超級狠辣椒", "speed": 75, "extreme": 139, "delta": 0, "sprite": "https://play.pokemonshowdown.com/sprites/home/scovillainmega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 44, "bring_rate": 2.3, "id": "eelektross", "chinese_name": "麻麻鰻魚王", "display_name": "Eelektross", "types": ["electric"], "base_spd": 50, "no_ev": 70, "max_spd": 102, "extreme": 112, "sprite": "https://play.pokemonshowdown.com/sprites/home/eelektross.png", "megas": [{"apiName": "eelektross-mega", "chineseName": "超級麻麻鰻魚王", "speed": 80, "extreme": 145, "delta": 30, "sprite": "https://play.pokemonshowdown.com/sprites/home/eelektrossmega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 45, "bring_rate": 2.2, "id": "gardevoir", "chinese_name": "沙奈朵", "display_name": "Gardevoir", "types": ["psychic", "fairy"], "base_spd": 80, "no_ev": 100, "max_spd": 132, "extreme": 145, "sprite": "https://play.pokemonshowdown.com/sprites/home/gardevoir.png", "megas": [{"apiName": "gardevoir-mega", "chineseName": "超級沙奈朵", "speed": 100, "extreme": 167, "delta": 20, "sprite": "https://play.pokemonshowdown.com/sprites/home/gardevoirmega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 46, "bring_rate": 2.2, "id": "vileplume", "chinese_name": "霸王花", "display_name": "Vileplume", "types": ["grass", "poison"], "base_spd": 50, "no_ev": 70, "max_spd": 102, "extreme": 112, "sprite": "https://play.pokemonshowdown.com/sprites/home/vileplume.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 47, "bring_rate": 2.1, "id": "sceptile", "chinese_name": "蜥蜴王", "display_name": "Sceptile", "types": ["grass"], "base_spd": 120, "no_ev": 140, "max_spd": 172, "extreme": 189, "sprite": "https://play.pokemonshowdown.com/sprites/home/sceptile.png", "megas": [{"apiName": "sceptile-mega", "chineseName": "超級蜥蜴王", "speed": 145, "extreme": 216, "delta": 25, "sprite": "https://play.pokemonshowdown.com/sprites/home/sceptilemega.png"}], "has_mega": true, "priority": []}, {"doubles_rank": 48, "bring_rate": 2.1, "id": "politoed", "chinese_name": "蚊香蛙皇", "display_name": "Politoed", "types": ["water"], "base_spd": 70, "no_ev": 90, "max_spd": 122, "extreme": 134, "sprite": "https://play.pokemonshowdown.com/sprites/home/politoed.png", "megas": [], "has_mega": false, "priority": []}, {"doubles_rank": 49, "bring_rate": 2.1, "id": "mamoswine", "chinese_name": "象牙豬", "display_name": "Mamoswine", "types": ["ice", "ground"], "base_spd": 80, "no_ev": 100, "max_spd": 132, "extreme": 145, "sprite": "https://play.pokemonshowdown.com/sprites/home/mamoswine.png", "megas": [], "has_mega": false, "priority": [["冰矢", "+1"]]}, {"doubles_rank": 50, "bring_rate": 1.9, "id": "rotom-heat", "chinese_name": "洛托姆 (加熱洛托姆)", "display_name": "Rotom (Heat Rotom)", "types": ["electric", "fire"], "base_spd": 86, "no_ev": 106, "max_spd": 138, "extreme": 151, "sprite": "https://play.pokemonshowdown.com/sprites/home/rotom-heat.png", "megas": [], "has_mega": false, "priority": []}];
+const TC={"normal": "#A8A77A", "fire": "#EE8130", "water": "#6390F0", "electric": "#F7D02C", "grass": "#7AC74C", "ice": "#96D9D6", "fighting": "#C22E28", "poison": "#A33EA1", "ground": "#E2BF65", "flying": "#A98FF3", "psychic": "#F95587", "bug": "#A6B91A", "rock": "#B6A136", "ghost": "#735797", "dragon": "#6F35FC", "dark": "#705746", "steel": "#B7B7CE", "fairy": "#D685AD"};
+const COL=76,SPR=54,RING=4,R_HIT=33;
+const PAD_L=56,PAD_T=16,PAD_R=40,PAD_B=90,H_CV=660;
+
+let mode='s',D=D_S;
+let minS=0,selT="",megaOnly=false,sCol="rank",sDir=1;
+let filtered=[],hlId=null;
+
+function rankOf(p){return mode==='s'?p.singles_rank:p.doubles_rank;}
+function getKey(p,k){if(k==='rank')return rankOf(p);const v=p[k];return v===undefined?0:v;}
+
+function rebuildTypeFilter(){
+  const allT=new Set();D.forEach(p=>p.types.forEach(t=>allT.add(t)));
+  const tsel=document.getElementById("tf");
+  tsel.innerHTML='<option value="">所有屬性</option>';
+  [...allT].sort().forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;tsel.appendChild(o);});
+}
+
+function switchMode(m){
+  if(mode===m)return;
+  mode=m;D=m==='s'?D_S:D_D;
+  hlId=null;sCol='rank';sDir=1;minS=0;selT='';megaOnly=false;
+  document.getElementById("sf").value=0;
+  document.getElementById("sv").textContent="0";
+  document.getElementById("tf").value="";
+  document.getElementById("mb").classList.remove("on");
+  document.querySelectorAll(".mode-btn").forEach(b=>b.classList.toggle("on",b.dataset.m===m));
+  document.getElementById("mode-hd").textContent=m==='s'?`單打前${D.length}`:`雙打前${D.length}`;
+  document.querySelectorAll("thead th").forEach(h=>h.classList.remove("asc","dsc"));
+  rebuildTypeFilter();render();
+}
+
+document.getElementById("sf").addEventListener("input",e=>{minS=+e.target.value;document.getElementById("sv").textContent=minS;render();});
+document.getElementById("tf").addEventListener("change",e=>{selT=e.target.value;render();});
+document.getElementById("mb").addEventListener("click",()=>{megaOnly=!megaOnly;document.getElementById("mb").classList.toggle("on",megaOnly);render();});
+document.querySelectorAll("thead th[data-k]").forEach(th=>{
+  th.addEventListener("click",()=>{
+    const k=th.dataset.k;
+    if(sCol===k)sDir*=-1;else{sCol=k;sDir=1;}
+    document.querySelectorAll("thead th").forEach(h=>h.classList.remove("asc","dsc"));
+    th.classList.add(sDir===1?"asc":"dsc");render();
+  });
+});
+
+function tc(s){
+  if(s>=120)return"#7c3aed";if(s>=110)return"#2563eb";
+  if(s>=100)return"#059669";if(s>=85)return"#d97706";return"#dc2626";
+}
+function badge(t){return`<span class="badge" style="background:${TC[t]||'#888'}">${t}</span>`;}
+function chip(s){return`<span class="chip" style="background:${tc(s)}">${s}</span>`;}
+function dtag(d){
+  if(d>0)return`<span class="dtag up">+${d}</span>`;
+  if(d<0)return`<span class="dtag dn">${d}</span>`;
+  return`<span class="dtag eq">±0</span>`;
+}
+
+function render(){
+  document.getElementById("th-bring").style.display=mode==='d'?'':'none';
+  filtered=D.filter(p=>p.base_spd>=minS&&(!selT||p.types.includes(selT))&&(!megaOnly||p.has_mega))
+            .sort((a,b)=>{const av=getKey(a,sCol),bv=getKey(b,sCol);return sDir*(av>bv?1:av<bv?-1:0);});
+  const tb=document.getElementById("tb"),nr=document.getElementById("nr");
+  if(!filtered.length){tb.innerHTML="";nr.style.display="block";updateChart();return;}
+  nr.style.display="none";
+  tb.innerHTML=filtered.map(p=>{
+    const priHtml=p.priority.length
+      ?p.priority.map(([nm,pr])=>`<span style="display:inline-flex;align-items:center;gap:2px;background:#fff7ed;border:1px solid #fed7aa;border-radius:5px;padding:1px 5px;font-size:.72rem;margin:1px"><b style="color:#ea580c">${pr}</b><span style="color:#9a3412">${nm}</span></span>`).join("")
+      :'<span style="color:#cbd5e1;font-size:.72rem">—</span>';
+    const bringCell=mode==='d'?`<td class="sc"><span class="br-badge">${p.bring_rate}%</span></td>`:'';
+    const mrow=p.megas.map(m=>`
+    <tr class="mrow">
+      <td></td>
+      <td><img src="${m.sprite}" width="34" height="34" style="image-rendering:pixelated;display:block;margin:0 auto" onerror="this.style.opacity=0"></td>
+      <td colspan="2"><span class="mn">↕ ${m.chineseName||m.apiName}</span> ${dtag(m.delta)}</td>
+      <td class="sc">${chip(m.speed)}</td><td></td><td></td>
+      <td class="sc hi">${m.extreme}</td>
+      ${mode==='d'?'<td></td>':''}
+      <td></td>
+    </tr>`).join("");
+    return`<tr data-id="${p.id}" onclick="hlRow('${p.id}')" class="${hlId===p.id?"hl":""}">
+      <td class="rk"><span class="rk-badge">#${rankOf(p)}</span></td>
+      <td class="spr"><img src="${p.sprite}" alt="${p.chinese_name}" onerror="this.style.opacity=.15"></td>
+      <td class="nm"><div class="zh">${p.chinese_name}</div><div class="en">${p.display_name}</div></td>
+      <td>${p.types.map(badge).join(" ")} ${p.has_mega?'<span class="badge mbadge">★M</span>':""}</td>
+      <td class="sc">${p.base_spd?chip(p.base_spd):"—"}</td>
+      <td class="sc">${p.no_ev||"—"}</td><td class="sc">${p.max_spd||"—"}</td>
+      <td class="sc hi">${p.extreme||"—"}</td>
+      ${bringCell}
+      <td>${priHtml}</td>
+    </tr>${mrow}`;
+  }).join("");
+  updateChart();
+}
+function hlRow(id){hlId=(hlId===id)?null:id;render();}
+
+function Y(spd,ch){const MN=0,MX=150;return PAD_T+ch-(spd-MN)/(MX-MN)*ch;}
+function updateChart(){
+  const cv=document.getElementById("cv"),wrap=document.getElementById("cvWrap"),ovl=document.getElementById("overlay");
+  const n=filtered.length,W=Math.max(PAD_L+n*COL+PAD_R,600),ch=H_CV-PAD_T-PAD_B;
+  cv.width=W;cv.height=H_CV;wrap.style.width=W+"px";wrap.style.height=H_CV+"px";
+  const ctx=cv.getContext("2d");ctx.clearRect(0,0,W,H_CV);
+  [[120,150,"#7c3aed0c"],[110,120,"#2563eb0c"],[100,110,"#0596690c"],[85,100,"#d977060c"],[0,85,"#dc26260c"]]
+    .forEach(([lo,hi,c])=>{ctx.fillStyle=c;ctx.fillRect(PAD_L,Y(hi,ch),W-PAD_L-PAD_R,Y(lo,ch)-Y(hi,ch));});
+  for(let s=0;s<=150;s+=10){
+    const y=Y(s,ch);
+    ctx.strokeStyle="#e2e8f0";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PAD_L,y);ctx.lineTo(W-PAD_R,y);ctx.stroke();
+    ctx.fillStyle="#94a3b8";ctx.font="12px 'Segoe UI',sans-serif";ctx.textAlign="right";ctx.fillText(s,PAD_L-7,y+4.5);
+  }
+  ctx.save();ctx.translate(15,PAD_T+ch/2);ctx.rotate(-Math.PI/2);
+  ctx.textAlign="center";ctx.fillStyle="#64748b";ctx.font="12px 'Segoe UI',sans-serif";
+  ctx.fillText("速度（Lv.50 基速）",0,0);ctx.restore();
+  const sorted=[...filtered].sort((a,b)=>a.base_spd-b.base_spd);
+  sorted.forEach((p,i)=>{
+    if(!p.base_spd)return;
+    const x=PAD_L+i*COL+COL/2,y=Y(p.base_spd,ch),isHL=p.id===hlId;
+    p.megas.forEach((m,mi)=>{
+      if(!m.speed)return;
+      const my=Y(m.speed,ch),up=m.delta>0,same=m.delta===0;
+      const lc=same?"#94a3b8":up?"#059669":"#dc2626";
+      const ox=(p.megas.length>1)?(mi===0?-10:10):0,mx=x+ox;
+      const halfS=SPR/2+3,fy=up?y-halfS:y+halfS,ty=up?my+20:my-20;
+      ctx.save();ctx.strokeStyle=lc;ctx.lineWidth=isHL?2.5:1.8;ctx.setLineDash([5,3]);
+      ctx.beginPath();ctx.moveTo(mx,fy);ctx.lineTo(mx,ty);ctx.stroke();ctx.setLineDash([]);
+      const dir=up?-1:1;ctx.beginPath();ctx.moveTo(mx,ty);ctx.lineTo(mx-5,ty+dir*9);ctx.lineTo(mx+5,ty+dir*9);
+      ctx.closePath();ctx.fillStyle=lc;ctx.fill();
+      const dl=m.delta>0?"+"+m.delta:String(m.delta);
+      ctx.fillStyle=lc;ctx.font="bold 10px 'Segoe UI',sans-serif";ctx.textAlign="left";ctx.fillText(dl,mx+21,(y+my)/2);
+      ctx.restore();
+    });
+    const col=tc(p.base_spd);
+    ctx.save();ctx.beginPath();ctx.arc(x,y,SPR/2+RING+1,0,Math.PI*2);
+    ctx.strokeStyle=col;ctx.lineWidth=isHL?4:2.5;
+    if(isHL){ctx.shadowColor=col;ctx.shadowBlur=16;}
+    ctx.stroke();ctx.restore();
+    ctx.save();ctx.fillStyle=isHL?col:"#475569";ctx.font=(isHL?"bold ":"")+"12px 'Segoe UI',sans-serif";
+    ctx.textAlign="center";ctx.fillText(p.base_spd,x,y+SPR/2+RING+18);ctx.restore();
+    p.megas.forEach((m,mi)=>{
+      if(!m.speed)return;
+      const my=Y(m.speed,ch),up=m.delta>0,lc=up?"#059669":m.delta===0?"#94a3b8":"#dc2626";
+      const ox=(p.megas.length>1)?(mi===0?-10:10):0;
+      ctx.save();ctx.fillStyle=lc;ctx.font="bold 11px 'Segoe UI',sans-serif";ctx.textAlign="center";
+      ctx.fillText(m.speed,x+ox,my+(up?-24:34));ctx.restore();
+    });
+  });
+  ovl.innerHTML="";
+  sorted.forEach((p,i)=>{
+    if(!p.base_spd)return;
+    const x=PAD_L+i*COL+COL/2,y=Y(p.base_spd,ch),col=tc(p.base_spd),isHL=p.id===hlId;
+    const dot=document.createElement("div");
+    dot.className="spdot"+(isHL?" hl":"");
+    dot.style.left=x+"px";dot.style.top=y+"px";dot.style.borderColor=col;
+    dot.style.borderWidth=isHL?"4px":"2.5px";
+    if(isHL)dot.style.boxShadow=`0 0 18px ${col}`;
+    dot.title=`#${rankOf(p)} ${p.chinese_name} (基速 ${p.base_spd})`;
+    const rk=document.createElement("span");rk.className="rk-tag";rk.style.color=col;rk.textContent="#"+rankOf(p);dot.appendChild(rk);
+    const img=document.createElement("img");img.src=p.sprite;img.alt=p.chinese_name;img.width=SPR;img.height=SPR;
+    img.onerror=function(){
+      this.style.display="none";
+      const fb=document.createElement("div");
+      fb.style.cssText=`width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${col};background:${col}18;padding:2px`;
+      fb.textContent=p.chinese_name.slice(0,3);dot.appendChild(fb);
+    };
+    dot.appendChild(img);
+    if(p.priority&&p.priority.length){
+      const pb=document.createElement("div");pb.className="pri-badge";
+      pb.style.left=x+"px";pb.style.top=(y-SPR/2-RING-18)+"px";
+      pb.textContent="先制";pb.title=p.priority.map(([n,pr])=>pr+" "+n).join("、");
+      ovl.appendChild(pb);
+    }
+    dot.addEventListener("click",()=>hlRow(p.id));ovl.appendChild(dot);
+    const nm=document.createElement("div");nm.className="nm-label"+(isHL?" hl":"");
+    nm.textContent=p.chinese_name;nm.style.left=x+"px";nm.style.top=(H_CV-PAD_B+14)+"px";ovl.appendChild(nm);
+    p.megas.forEach((m,mi)=>{
+      if(!m.speed)return;
+      const my=Y(m.speed,ch),ox=(p.megas.length>1)?(mi===0?-10:10):0;
+      const mdot=document.createElement("div");mdot.className="megadot";mdot.style.left=(x+ox)+"px";mdot.style.top=my+"px";
+      const mimg=document.createElement("img");mimg.src=m.sprite;mimg.alt=m.chineseName||"Mega";
+      mimg.style.cssText="width:100%;height:100%;object-fit:contain;image-rendering:pixelated";
+      mimg.onerror=function(){this.style.display="none";};mdot.appendChild(mimg);ovl.appendChild(mdot);
+    });
+  });
+}
+
+/* ════════════════════ QUIZ JS ════════════════════ */
+const DATA={"incineroar": {"zh": "熾焰咆哮虎", "en": "Incineroar", "spd": 60, "sprite": "https://play.pokemonshowdown.com/sprites/home/incineroar.png", "role": "lead", "priority": [["假哭", "+3"]]}, "whimsicott": {"zh": "風妖精", "en": "Whimsicott", "spd": 116, "sprite": "https://play.pokemonshowdown.com/sprites/home/whimsicott.png", "role": "lead", "priority": []}, "pelipper": {"zh": "大嘴鷗", "en": "Pelipper", "spd": 65, "sprite": "https://play.pokemonshowdown.com/sprites/home/pelipper.png", "role": "lead", "priority": []}, "torkoal": {"zh": "煤炭龜", "en": "Torkoal", "spd": 20, "sprite": "https://play.pokemonshowdown.com/sprites/home/torkoal.png", "role": "lead", "priority": []}, "ninetales-alola": {"zh": "九尾 (阿羅拉的樣子)", "en": "Ninetales (Alolan Form)", "spd": 109, "sprite": "https://play.pokemonshowdown.com/sprites/home/ninetales-alola.png", "role": "lead", "priority": []}, "grimmsnarl": {"zh": "長毛巨魔", "en": "Grimmsnarl", "spd": 60, "sprite": "https://play.pokemonshowdown.com/sprites/home/grimmsnarl.png", "role": "lead", "priority": []}, "sinistcha": {"zh": "來悲粗茶", "en": "Sinistcha", "spd": 70, "sprite": "https://play.pokemonshowdown.com/sprites/home/sinistcha.png", "role": "lead", "priority": []}, "farigiraf": {"zh": "奇麒麟", "en": "Farigiraf", "spd": 60, "sprite": "https://play.pokemonshowdown.com/sprites/home/farigiraf.png", "role": "lead", "priority": []}, "hatterene": {"zh": "布莉姆溫", "en": "Hatterene", "spd": 29, "sprite": "https://play.pokemonshowdown.com/sprites/home/hatterene.png", "role": "lead", "priority": []}, "sableye": {"zh": "勾魂眼", "en": "Sableye", "spd": 50, "sprite": "https://play.pokemonshowdown.com/sprites/home/sableye.png", "role": "lead", "priority": []}, "politoed": {"zh": "蚊香蛙皇", "en": "Politoed", "spd": 70, "sprite": "https://play.pokemonshowdown.com/sprites/home/politoed.png", "role": "lead", "priority": []}, "mimikyu-disguised": {"zh": "謎擬Ｑ", "en": "Mimikyu", "spd": 96, "sprite": "https://play.pokemonshowdown.com/sprites/home/mimikyu.png", "role": "lead", "priority": [["影子偷襲", "+1"]]}, "mawile": {"zh": "大嘴娃", "en": "Mawile", "spd": 50, "sprite": "https://play.pokemonshowdown.com/sprites/home/mawile.png", "role": "lead", "priority": [["突襲", "+1"]]}, "garchomp": {"zh": "烈咬陸鯊", "en": "Garchomp", "spd": 102, "sprite": "https://play.pokemonshowdown.com/sprites/home/garchomp.png", "role": "attacker", "priority": []}, "archaludon": {"zh": "鋁鋼橋龍", "en": "Archaludon", "spd": 85, "sprite": "https://play.pokemonshowdown.com/sprites/home/archaludon.png", "role": "attacker", "priority": []}, "staraptor": {"zh": "姆克鷹", "en": "Staraptor", "spd": 100, "sprite": "https://play.pokemonshowdown.com/sprites/home/staraptor.png", "role": "attacker", "priority": []}, "charizard": {"zh": "噴火龍", "en": "Charizard", "spd": 100, "sprite": "https://play.pokemonshowdown.com/sprites/home/charizard.png", "role": "attacker", "priority": []}, "blaziken": {"zh": "火焰雞", "en": "Blaziken", "spd": 80, "sprite": "https://play.pokemonshowdown.com/sprites/home/blaziken.png", "role": "attacker", "priority": [["假哭", "+3"], ["真空掌", "+1"]]}, "meowscarada": {"zh": "魔幻假面喵", "en": "Meowscarada", "spd": 123, "sprite": "https://play.pokemonshowdown.com/sprites/home/meowscarada.png", "role": "attacker", "priority": []}, "basculegion-male": {"zh": "幽尾玄魚 (雄性的樣子)", "en": "Basculegion (Male)", "spd": 78, "sprite": "https://play.pokemonshowdown.com/sprites/home/basculegion.png", "role": "attacker", "priority": [["水流噴射", "+1"]]}, "palafin-zero": {"zh": "海豚俠", "en": "Palafin", "spd": 100, "sprite": "https://play.pokemonshowdown.com/sprites/home/palafin.png", "role": "attacker", "priority": [["噴射拳", "+1"]]}, "gyarados": {"zh": "暴鯉龍", "en": "Gyarados", "spd": 81, "sprite": "https://play.pokemonshowdown.com/sprites/home/gyarados.png", "role": "attacker", "priority": []}, "hydreigon": {"zh": "三首惡龍", "en": "Hydreigon", "spd": 98, "sprite": "https://play.pokemonshowdown.com/sprites/home/hydreigon.png", "role": "attacker", "priority": []}, "dragonite": {"zh": "快龍", "en": "Dragonite", "spd": 80, "sprite": "https://play.pokemonshowdown.com/sprites/home/dragonite.png", "role": "attacker", "priority": [["神速", "+2"]]}, "gholdengo": {"zh": "賽富豪", "en": "Gholdengo", "spd": 84, "sprite": "https://play.pokemonshowdown.com/sprites/home/gholdengo.png", "role": "attacker", "priority": []}, "kingambit": {"zh": "仆斬將軍", "en": "Kingambit", "spd": 50, "sprite": "https://play.pokemonshowdown.com/sprites/home/kingambit.png", "role": "attacker", "priority": [["突襲", "+1"]]}, "krookodile": {"zh": "流氓鱷", "en": "Krookodile", "spd": 92, "sprite": "https://play.pokemonshowdown.com/sprites/home/krookodile.png", "role": "attacker", "priority": []}, "gengar": {"zh": "耿鬼", "en": "Gengar", "spd": 110, "sprite": "https://play.pokemonshowdown.com/sprites/home/gengar.png", "role": "attacker", "priority": [["影子偷襲", "+1"]]}, "greninja": {"zh": "甲賀忍蛙", "en": "Greninja", "spd": 122, "sprite": "https://play.pokemonshowdown.com/sprites/home/greninja.png", "role": "attacker", "priority": []}, "scizor": {"zh": "巨鉗螳螂", "en": "Scizor", "spd": 65, "sprite": "https://play.pokemonshowdown.com/sprites/home/scizor.png", "role": "attacker", "priority": [["子彈拳", "+1"]]}, "volcarona": {"zh": "火神蛾", "en": "Volcarona", "spd": 100, "sprite": "https://play.pokemonshowdown.com/sprites/home/volcarona.png", "role": "attacker", "priority": []}, "glimmora": {"zh": "晶光花", "en": "Glimmora", "spd": 86, "sprite": "https://play.pokemonshowdown.com/sprites/home/glimmora.png", "role": "attacker", "priority": []}, "armarouge": {"zh": "紅蓮鎧騎", "en": "Armarouge", "spd": 75, "sprite": "https://play.pokemonshowdown.com/sprites/home/armarouge.png", "role": "attacker", "priority": []}, "weavile": {"zh": "瑪狃拉", "en": "Weavile", "spd": 125, "sprite": "https://play.pokemonshowdown.com/sprites/home/weavile.png", "role": "attacker", "priority": [["冰矢", "+1"], ["突襲", "+1"]]}, "lucario": {"zh": "路卡利歐", "en": "Lucario", "spd": 90, "sprite": "https://play.pokemonshowdown.com/sprites/home/lucario.png", "role": "attacker", "priority": [["子彈拳", "+1"], ["神速", "+2"]]}, "annihilape": {"zh": "棄世猴", "en": "Annihilape", "spd": 90, "sprite": "https://play.pokemonshowdown.com/sprites/home/annihilape.png", "role": "attacker", "priority": [["突襲", "+1"]]}, "mamoswine": {"zh": "象牙豬", "en": "Mamoswine", "spd": 80, "sprite": "https://play.pokemonshowdown.com/sprites/home/mamoswine.png", "role": "attacker", "priority": [["冰矢", "+1"]]}, "electivire": {"zh": "電肚蛙", "en": "electivire", "spd": 95, "sprite": "https://play.pokemonshowdown.com/sprites/home/electivire.png", "role": "attacker", "priority": []}, "hitmonlee": {"zh": "巨飛腿郎", "en": "hitmonlee", "spd": 87, "sprite": "https://play.pokemonshowdown.com/sprites/home/hitmonlee.png", "role": "attacker", "priority": [["假哭", "+3"]]}, "hitmonchan": {"zh": "戰舞郎", "en": "hitmonchan", "spd": 76, "sprite": "https://play.pokemonshowdown.com/sprites/home/hitmonchan.png", "role": "attacker", "priority": [["假哭", "+3"], ["真空掌", "+1"]]}, "sneasler": {"zh": "大狃拉", "en": "Sneasler", "spd": 120, "sprite": "https://play.pokemonshowdown.com/sprites/home/sneasler.png", "role": "attacker", "priority": [["突襲", "+1"]]}, "aerodactyl": {"zh": "化石翼龍", "en": "Aerodactyl", "spd": 130, "sprite": "https://play.pokemonshowdown.com/sprites/home/aerodactyl.png", "role": "attacker", "priority": []}, "talonflame": {"zh": "烈箭鷹", "en": "Talonflame", "spd": 126, "sprite": "https://play.pokemonshowdown.com/sprites/home/talonflame.png", "role": "attacker", "priority": [["勇鳥猛撞", "+1"]]}, "delphox": {"zh": "妖火紅狐", "en": "Delphox", "spd": 104, "sprite": "https://play.pokemonshowdown.com/sprites/home/delphox.png", "role": "attacker", "priority": []}, "pyroar-male": {"zh": "火炎獅", "en": "Pyroar", "spd": 106, "sprite": "https://play.pokemonshowdown.com/sprites/home/pyroar.png", "role": "attacker", "priority": []}, "ceruledge": {"zh": "蒼炎刃鬼", "en": "Ceruledge", "spd": 85, "sprite": "https://play.pokemonshowdown.com/sprites/home/ceruledge.png", "role": "attacker", "priority": []}, "scovillain": {"zh": "狠辣椒", "en": "Scovillain", "spd": 75, "sprite": "https://play.pokemonshowdown.com/sprites/home/scovillain.png", "role": "attacker", "priority": []}, "sceptile": {"zh": "蜥蜴王", "en": "Sceptile", "spd": 120, "sprite": "https://play.pokemonshowdown.com/sprites/home/sceptile.png", "role": "attacker", "priority": []}, "raichu": {"zh": "雷丘", "en": "Raichu", "spd": 110, "sprite": "https://play.pokemonshowdown.com/sprites/home/raichu.png", "role": "attacker", "priority": [["電光石火", "+1"]]}, "lopunny": {"zh": "長耳兔", "en": "Lopunny", "spd": 105, "sprite": "https://play.pokemonshowdown.com/sprites/home/lopunny.png", "role": "attacker", "priority": [["假哭", "+3"], ["電光石火", "+1"]]}, "starmie": {"zh": "寶石海星", "en": "Starmie", "spd": 115, "sprite": "https://play.pokemonshowdown.com/sprites/home/starmie.png", "role": "attacker", "priority": []}, "kangaskhan": {"zh": "袋獸", "en": "Kangaskhan", "spd": 90, "sprite": "https://play.pokemonshowdown.com/sprites/home/kangaskhan.png", "role": "attacker", "priority": [["假哭", "+3"]]}, "scrafty": {"zh": "頭巾混混", "en": "Scrafty", "spd": 58, "sprite": "https://play.pokemonshowdown.com/sprites/home/scrafty.png", "role": "attacker", "priority": []}, "tyranitar": {"zh": "班基拉斯", "en": "Tyranitar", "spd": 61, "sprite": "https://play.pokemonshowdown.com/sprites/home/tyranitar.png", "role": "attacker", "priority": []}, "doublade": {"zh": "洗翠大劍鬼", "en": "doublade", "spd": 35, "sprite": "https://play.pokemonshowdown.com/sprites/home/doublade.png", "role": "attacker", "priority": [["影子偷襲", "+1"]]}, "maushold-family-of-four": {"zh": "一家鼠", "en": "Maushold", "spd": 111, "sprite": "https://play.pokemonshowdown.com/sprites/home/maushold-four.png", "role": "attacker", "priority": []}, "cetitan": {"zh": "雙倍多多冰", "en": "cetitan", "spd": 36, "sprite": "https://play.pokemonshowdown.com/sprites/home/cetitan.png", "role": "attacker", "priority": [["冰矢", "+1"]]}, "froslass": {"zh": "雪妖女", "en": "Froslass", "spd": 110, "sprite": "https://play.pokemonshowdown.com/sprites/home/froslass.png", "role": "attacker", "priority": []}, "corviknight": {"zh": "鋼鎧鴉", "en": "Corviknight", "spd": 67, "sprite": "https://play.pokemonshowdown.com/sprites/home/corviknight.png", "role": "tank", "priority": []}, "swampert": {"zh": "巨沼怪", "en": "Swampert", "spd": 60, "sprite": "https://play.pokemonshowdown.com/sprites/home/swampert.png", "role": "tank", "priority": []}, "metagross": {"zh": "巨金怪", "en": "Metagross", "spd": 70, "sprite": "https://play.pokemonshowdown.com/sprites/home/metagross.png", "role": "tank", "priority": [["子彈拳", "+1"]]}, "toxapex": {"zh": "超壞星", "en": "Toxapex", "spd": 35, "sprite": "https://play.pokemonshowdown.com/sprites/home/toxapex.png", "role": "tank", "priority": []}, "umbreon": {"zh": "月亮伊布", "en": "Umbreon", "spd": 65, "sprite": "https://play.pokemonshowdown.com/sprites/home/umbreon.png", "role": "tank", "priority": []}, "sylveon": {"zh": "仙子伊布", "en": "Sylveon", "spd": 60, "sprite": "https://play.pokemonshowdown.com/sprites/home/sylveon.png", "role": "tank", "priority": []}, "blastoise": {"zh": "水箭龜", "en": "Blastoise", "spd": 78, "sprite": "https://play.pokemonshowdown.com/sprites/home/blastoise.png", "role": "tank", "priority": []}, "venusaur": {"zh": "妙蛙花", "en": "Venusaur", "spd": 80, "sprite": "https://play.pokemonshowdown.com/sprites/home/venusaur.png", "role": "tank", "priority": []}, "rotom-wash": {"zh": "洛托姆 (清洗洛托姆)", "en": "Rotom (Wash Rotom)", "spd": 86, "sprite": "https://play.pokemonshowdown.com/sprites/home/rotom-wash.png", "role": "tank", "priority": []}, "rotom-heat": {"zh": "洛托姆 (加熱洛托姆)", "en": "Rotom (Heat Rotom)", "spd": 86, "sprite": "https://play.pokemonshowdown.com/sprites/home/rotom-heat.png", "role": "tank", "priority": []}, "milotic": {"zh": "美納斯", "en": "Milotic", "spd": 81, "sprite": "https://play.pokemonshowdown.com/sprites/home/milotic.png", "role": "tank", "priority": []}, "eelektross": {"zh": "麻麻鰻魚王", "en": "Eelektross", "spd": 50, "sprite": "https://play.pokemonshowdown.com/sprites/home/eelektross.png", "role": "tank", "priority": []}, "gardevoir": {"zh": "沙奈朵", "en": "Gardevoir", "spd": 80, "sprite": "https://play.pokemonshowdown.com/sprites/home/gardevoir.png", "role": "tank", "priority": []}, "vileplume": {"zh": "霸王花", "en": "Vileplume", "spd": 50, "sprite": "https://play.pokemonshowdown.com/sprites/home/vileplume.png", "role": "tank", "priority": []}, "meganium": {"zh": "大竺葵", "en": "Meganium", "spd": 80, "sprite": "https://play.pokemonshowdown.com/sprites/home/meganium.png", "role": "tank", "priority": []}, "floette-eternal": {"zh": "永恆之花花葉蒂", "en": "Floette (Eternal Flower)", "spd": 92, "sprite": "https://play.pokemonshowdown.com/sprites/dex/floette-eternal.png", "role": "tank", "priority": []}};
+const ROLES={"lead": ["incineroar", "whimsicott", "pelipper", "torkoal", "ninetales-alola", "grimmsnarl", "sinistcha", "farigiraf", "hatterene", "sableye", "politoed", "mimikyu-disguised", "mawile"], "attacker": ["garchomp", "archaludon", "staraptor", "charizard", "blaziken", "meowscarada", "basculegion-male", "palafin-zero", "gyarados", "hydreigon", "dragonite", "gholdengo", "kingambit", "krookodile", "gengar", "greninja", "scizor", "volcarona", "glimmora", "armarouge", "weavile", "lucario", "annihilape", "mamoswine", "electivire", "hitmonlee", "hitmonchan", "sneasler", "aerodactyl", "talonflame", "delphox", "pyroar-male", "ceruledge", "scovillain", "sceptile", "raichu", "lopunny", "starmie", "kangaskhan", "scrafty", "tyranitar", "doublade", "maushold-family-of-four", "cetitan", "froslass"], "tank": ["corviknight", "swampert", "metagross", "toxapex", "umbreon", "sylveon", "blastoise", "venusaur", "rotom-wash", "rotom-heat", "milotic", "eelektross", "gardevoir", "vileplume", "meganium", "floette-eternal"]};
+const HARD=[["incineroar", "pelipper"], ["incineroar", "grimmsnarl"], ["incineroar", "sinistcha"], ["incineroar", "farigiraf"], ["incineroar", "sableye"], ["incineroar", "politoed"], ["incineroar", "mawile"], ["incineroar", "kingambit"], ["incineroar", "scizor"], ["incineroar", "scrafty"], ["incineroar", "tyranitar"], ["incineroar", "corviknight"], ["incineroar", "swampert"], ["incineroar", "metagross"], ["incineroar", "umbreon"], ["incineroar", "sylveon"], ["incineroar", "eelektross"], ["incineroar", "vileplume"], ["whimsicott", "ninetales-alola"], ["whimsicott", "meowscarada"], ["whimsicott", "gengar"], ["whimsicott", "greninja"], ["whimsicott", "weavile"], ["whimsicott", "sneasler"], ["whimsicott", "talonflame"], ["whimsicott", "pyroar-male"], ["whimsicott", "sceptile"], ["whimsicott", "raichu"], ["whimsicott", "starmie"], ["whimsicott", "maushold-family-of-four"], ["whimsicott", "froslass"], ["pelipper", "grimmsnarl"], ["pelipper", "sinistcha"], ["pelipper", "farigiraf"], ["pelipper", "politoed"], ["pelipper", "scizor"], ["pelipper", "armarouge"], ["pelipper", "scovillain"], ["pelipper", "scrafty"], ["pelipper", "tyranitar"], ["pelipper", "corviknight"], ["pelipper", "swampert"], ["pelipper", "metagross"], ["pelipper", "umbreon"], ["pelipper", "sylveon"], ["torkoal", "hatterene"], ["ninetales-alola", "garchomp"], ["ninetales-alola", "staraptor"], ["ninetales-alola", "charizard"], ["ninetales-alola", "palafin-zero"], ["ninetales-alola", "gengar"], ["ninetales-alola", "volcarona"], ["ninetales-alola", "delphox"], ["ninetales-alola", "pyroar-male"], ["ninetales-alola", "raichu"], ["ninetales-alola", "lopunny"], ["ninetales-alola", "starmie"], ["ninetales-alola", "maushold-family-of-four"], ["ninetales-alola", "froslass"], ["grimmsnarl", "sinistcha"], ["grimmsnarl", "farigiraf"], ["grimmsnarl", "sableye"], ["grimmsnarl", "politoed"], ["grimmsnarl", "mawile"], ["grimmsnarl", "kingambit"], ["grimmsnarl", "scizor"], ["grimmsnarl", "scrafty"], ["grimmsnarl", "tyranitar"], ["grimmsnarl", "corviknight"], ["grimmsnarl", "swampert"], ["grimmsnarl", "metagross"], ["grimmsnarl", "umbreon"], ["grimmsnarl", "sylveon"], ["grimmsnarl", "eelektross"], ["grimmsnarl", "vileplume"], ["sinistcha", "farigiraf"], ["sinistcha", "politoed"], ["sinistcha", "blaziken"], ["sinistcha", "basculegion-male"], ["sinistcha", "dragonite"], ["sinistcha", "scizor"], ["sinistcha", "armarouge"], ["sinistcha", "mamoswine"], ["sinistcha", "hitmonchan"], ["sinistcha", "scovillain"], ["sinistcha", "tyranitar"], ["sinistcha", "corviknight"], ["sinistcha", "swampert"], ["sinistcha", "metagross"], ["sinistcha", "umbreon"], ["sinistcha", "sylveon"], ["sinistcha", "blastoise"], ["sinistcha", "venusaur"], ["sinistcha", "gardevoir"], ["sinistcha", "meganium"], ["farigiraf", "sableye"], ["farigiraf", "politoed"], ["farigiraf", "mawile"], ["farigiraf", "kingambit"], ["farigiraf", "scizor"], ["farigiraf", "scrafty"], ["farigiraf", "tyranitar"], ["farigiraf", "corviknight"], ["farigiraf", "swampert"], ["farigiraf", "metagross"], ["farigiraf", "umbreon"], ["farigiraf", "sylveon"], ["farigiraf", "eelektross"], ["farigiraf", "vileplume"], ["hatterene", "doublade"], ["hatterene", "cetitan"], ["hatterene", "toxapex"], ["sableye", "mawile"], ["sableye", "kingambit"], ["sableye", "scrafty"], ["sableye", "swampert"], ["sableye", "sylveon"], ["sableye", "eelektross"], ["sableye", "vileplume"], ["politoed", "blaziken"], ["politoed", "basculegion-male"], ["politoed", "dragonite"], ["politoed", "scizor"], ["politoed", "armarouge"], ["politoed", "mamoswine"], ["politoed", "hitmonchan"], ["politoed", "scovillain"], ["politoed", "tyranitar"], ["politoed", "corviknight"], ["politoed", "swampert"], ["politoed", "metagross"], ["politoed", "umbreon"], ["politoed", "sylveon"], ["politoed", "blastoise"], ["politoed", "venusaur"], ["politoed", "gardevoir"], ["politoed", "meganium"], ["mimikyu-disguised", "garchomp"], ["mimikyu-disguised", "staraptor"], ["mimikyu-disguised", "charizard"], ["mimikyu-disguised", "palafin-zero"], ["mimikyu-disguised", "hydreigon"], ["mimikyu-disguised", "krookodile"], ["mimikyu-disguised", "volcarona"], ["mimikyu-disguised", "glimmora"], ["mimikyu-disguised", "lucario"], ["mimikyu-disguised", "annihilape"], ["mimikyu-disguised", "electivire"], ["mimikyu-disguised", "hitmonlee"], ["mimikyu-disguised", "delphox"], ["mimikyu-disguised", "pyroar-male"], ["mimikyu-disguised", "lopunny"], ["mimikyu-disguised", "kangaskhan"], ["mimikyu-disguised", "rotom-wash"], ["mimikyu-disguised", "rotom-heat"], ["mimikyu-disguised", "floette-eternal"], ["mawile", "kingambit"], ["mawile", "scrafty"], ["mawile", "swampert"], ["mawile", "sylveon"], ["mawile", "eelektross"], ["mawile", "vileplume"], ["garchomp", "staraptor"], ["garchomp", "charizard"], ["garchomp", "palafin-zero"], ["garchomp", "hydreigon"], ["garchomp", "krookodile"], ["garchomp", "gengar"], ["garchomp", "volcarona"], ["garchomp", "electivire"], ["garchomp", "delphox"], ["garchomp", "pyroar-male"], ["garchomp", "raichu"], ["garchomp", "lopunny"], ["garchomp", "maushold-family-of-four"], ["garchomp", "froslass"], ["garchomp", "floette-eternal"], ["archaludon", "blaziken"], ["archaludon", "basculegion-male"], ["archaludon", "gyarados"], ["archaludon", "dragonite"], ["archaludon", "gholdengo"], ["archaludon", "krookodile"], ["archaludon", "glimmora"], ["archaludon", "armarouge"], ["archaludon", "lucario"], ["archaludon", "annihilape"], ["archaludon", "mamoswine"], ["archaludon", "electivire"], ["archaludon", "hitmonlee"], ["archaludon", "hitmonchan"], ["archaludon", "ceruledge"], ["archaludon", "scovillain"], ["archaludon", "kangaskhan"], ["archaludon", "blastoise"], ["archaludon", "venusaur"], ["archaludon", "rotom-wash"], ["archaludon", "rotom-heat"], ["archaludon", "milotic"], ["archaludon", "gardevoir"], ["archaludon", "meganium"], ["archaludon", "floette-eternal"], ["staraptor", "charizard"], ["staraptor", "palafin-zero"], ["staraptor", "hydreigon"], ["staraptor", "krookodile"], ["staraptor", "gengar"], ["staraptor", "volcarona"], ["staraptor", "lucario"], ["staraptor", "annihilape"], ["staraptor", "electivire"], ["staraptor", "delphox"], ["staraptor", "pyroar-male"], ["staraptor", "raichu"], ["staraptor", "lopunny"], ["staraptor", "kangaskhan"], ["staraptor", "froslass"], ["staraptor", "floette-eternal"], ["charizard", "palafin-zero"], ["charizard", "hydreigon"], ["charizard", "krookodile"], ["charizard", "gengar"], ["charizard", "volcarona"], ["charizard", "lucario"], ["charizard", "annihilape"], ["charizard", "electivire"], ["charizard", "delphox"], ["charizard", "pyroar-male"], ["charizard", "raichu"], ["charizard", "lopunny"], ["charizard", "kangaskhan"], ["charizard", "froslass"], ["charizard", "floette-eternal"], ["blaziken", "basculegion-male"], ["blaziken", "gyarados"], ["blaziken", "dragonite"], ["blaziken", "gholdengo"], ["blaziken", "glimmora"], ["blaziken", "armarouge"], ["blaziken", "lucario"], ["blaziken", "annihilape"], ["blaziken", "mamoswine"], ["blaziken", "hitmonlee"], ["blaziken", "hitmonchan"], ["blaziken", "ceruledge"], ["blaziken", "scovillain"], ["blaziken", "kangaskhan"], ["blaziken", "metagross"], ["blaziken", "blastoise"], ["blaziken", "venusaur"], ["blaziken", "rotom-wash"], ["blaziken", "rotom-heat"], ["blaziken", "milotic"], ["blaziken", "gardevoir"], ["blaziken", "meganium"], ["meowscarada", "greninja"], ["meowscarada", "weavile"], ["meowscarada", "sneasler"], ["meowscarada", "aerodactyl"], ["meowscarada", "talonflame"], ["meowscarada", "sceptile"], ["meowscarada", "starmie"], ["basculegion-male", "gyarados"], ["basculegion-male", "dragonite"], ["basculegion-male", "gholdengo"], ["basculegion-male", "glimmora"], ["basculegion-male", "armarouge"], ["basculegion-male", "mamoswine"], ["basculegion-male", "hitmonlee"], ["basculegion-male", "hitmonchan"], ["basculegion-male", "ceruledge"], ["basculegion-male", "scovillain"], ["basculegion-male", "metagross"], ["basculegion-male", "blastoise"], ["basculegion-male", "venusaur"], ["basculegion-male", "rotom-wash"], ["basculegion-male", "rotom-heat"], ["basculegion-male", "milotic"], ["basculegion-male", "gardevoir"], ["basculegion-male", "meganium"], ["palafin-zero", "hydreigon"], ["palafin-zero", "krookodile"], ["palafin-zero", "gengar"], ["palafin-zero", "volcarona"], ["palafin-zero", "lucario"], ["palafin-zero", "annihilape"], ["palafin-zero", "electivire"], ["palafin-zero", "delphox"], ["palafin-zero", "pyroar-male"], ["palafin-zero", "raichu"], ["palafin-zero", "lopunny"], ["palafin-zero", "kangaskhan"], ["palafin-zero", "froslass"], ["palafin-zero", "floette-eternal"], ["gyarados", "dragonite"], ["gyarados", "gholdengo"], ["gyarados", "glimmora"], ["gyarados", "armarouge"], ["gyarados", "lucario"], ["gyarados", "annihilape"], ["gyarados", "mamoswine"], ["gyarados", "hitmonlee"], ["gyarados", "hitmonchan"], ["gyarados", "ceruledge"], ["gyarados", "scovillain"], ["gyarados", "kangaskhan"], ["gyarados", "blastoise"], ["gyarados", "venusaur"], ["gyarados", "rotom-wash"], ["gyarados", "rotom-heat"], ["gyarados", "milotic"], ["gyarados", "gardevoir"], ["gyarados", "meganium"], ["hydreigon", "krookodile"], ["hydreigon", "volcarona"], ["hydreigon", "lucario"], ["hydreigon", "annihilape"], ["hydreigon", "electivire"], ["hydreigon", "delphox"], ["hydreigon", "pyroar-male"], ["hydreigon", "lopunny"], ["hydreigon", "kangaskhan"], ["hydreigon", "floette-eternal"], ["dragonite", "gholdengo"], ["dragonite", "glimmora"], ["dragonite", "armarouge"], ["dragonite", "lucario"], ["dragonite", "annihilape"], ["dragonite", "mamoswine"], ["dragonite", "hitmonlee"], ["dragonite", "hitmonchan"], ["dragonite", "ceruledge"], ["dragonite", "scovillain"], ["dragonite", "kangaskhan"], ["dragonite", "metagross"], ["dragonite", "blastoise"], ["dragonite", "venusaur"], ["dragonite", "rotom-wash"], ["dragonite", "rotom-heat"], ["dragonite", "milotic"], ["dragonite", "gardevoir"], ["dragonite", "meganium"], ["gholdengo", "krookodile"], ["gholdengo", "glimmora"], ["gholdengo", "armarouge"], ["gholdengo", "lucario"], ["gholdengo", "annihilape"], ["gholdengo", "mamoswine"], ["gholdengo", "hitmonlee"], ["gholdengo", "hitmonchan"], ["gholdengo", "ceruledge"], ["gholdengo", "scovillain"], ["gholdengo", "kangaskhan"], ["gholdengo", "blastoise"], ["gholdengo", "venusaur"], ["gholdengo", "rotom-wash"], ["gholdengo", "rotom-heat"], ["gholdengo", "milotic"], ["gholdengo", "gardevoir"], ["gholdengo", "meganium"], ["gholdengo", "floette-eternal"], ["kingambit", "scrafty"], ["kingambit", "swampert"], ["kingambit", "sylveon"], ["kingambit", "eelektross"], ["kingambit", "vileplume"], ["krookodile", "volcarona"], ["krookodile", "glimmora"], ["krookodile", "lucario"], ["krookodile", "annihilape"], ["krookodile", "electivire"], ["krookodile", "hitmonlee"], ["krookodile", "ceruledge"], ["krookodile", "kangaskhan"], ["krookodile", "rotom-wash"], ["krookodile", "rotom-heat"], ["krookodile", "floette-eternal"], ["gengar", "volcarona"], ["gengar", "sneasler"], ["gengar", "delphox"], ["gengar", "pyroar-male"], ["gengar", "sceptile"], ["gengar", "raichu"], ["gengar", "lopunny"], ["gengar", "starmie"], ["gengar", "maushold-family-of-four"], ["gengar", "froslass"], ["greninja", "weavile"], ["greninja", "sneasler"], ["greninja", "aerodactyl"], ["greninja", "talonflame"], ["greninja", "sceptile"], ["greninja", "starmie"], ["scizor", "armarouge"], ["scizor", "scovillain"], ["scizor", "scrafty"], ["scizor", "tyranitar"], ["scizor", "corviknight"], ["scizor", "swampert"], ["scizor", "metagross"], ["scizor", "umbreon"], ["scizor", "sylveon"], ["volcarona", "lucario"], ["volcarona", "annihilape"], ["volcarona", "electivire"], ["volcarona", "delphox"], ["volcarona", "pyroar-male"], ["volcarona", "raichu"], ["volcarona", "lopunny"], ["volcarona", "kangaskhan"], ["volcarona", "froslass"], ["volcarona", "floette-eternal"], ["glimmora", "lucario"], ["glimmora", "annihilape"], ["glimmora", "mamoswine"], ["glimmora", "electivire"], ["glimmora", "hitmonlee"], ["glimmora", "hitmonchan"], ["glimmora", "ceruledge"], ["glimmora", "kangaskhan"], ["glimmora", "blastoise"], ["glimmora", "venusaur"], ["glimmora", "rotom-wash"], ["glimmora", "rotom-heat"], ["glimmora", "milotic"], ["glimmora", "gardevoir"], ["glimmora", "meganium"], ["glimmora", "floette-eternal"], ["armarouge", "mamoswine"], ["armarouge", "hitmonchan"], ["armarouge", "ceruledge"], ["armarouge", "scovillain"], ["armarouge", "corviknight"], ["armarouge", "metagross"], ["armarouge", "umbreon"], ["armarouge", "blastoise"], ["armarouge", "venusaur"], ["armarouge", "milotic"], ["armarouge", "gardevoir"], ["armarouge", "meganium"], ["weavile", "sneasler"], ["weavile", "aerodactyl"], ["weavile", "talonflame"], ["weavile", "sceptile"], ["weavile", "starmie"], ["lucario", "annihilape"], ["lucario", "mamoswine"], ["lucario", "electivire"], ["lucario", "hitmonlee"], ["lucario", "ceruledge"], ["lucario", "kangaskhan"], ["lucario", "venusaur"], ["lucario", "rotom-wash"], ["lucario", "rotom-heat"], ["lucario", "milotic"], ["lucario", "gardevoir"], ["lucario", "meganium"], ["lucario", "floette-eternal"], ["annihilape", "mamoswine"], ["annihilape", "electivire"], ["annihilape", "hitmonlee"], ["annihilape", "ceruledge"], ["annihilape", "kangaskhan"], ["annihilape", "venusaur"], ["annihilape", "rotom-wash"], ["annihilape", "rotom-heat"], ["annihilape", "milotic"], ["annihilape", "gardevoir"], ["annihilape", "meganium"], ["annihilape", "floette-eternal"], ["mamoswine", "hitmonlee"], ["mamoswine", "hitmonchan"], ["mamoswine", "ceruledge"], ["mamoswine", "scovillain"], ["mamoswine", "kangaskhan"], ["mamoswine", "metagross"], ["mamoswine", "blastoise"], ["mamoswine", "venusaur"], ["mamoswine", "rotom-wash"], ["mamoswine", "rotom-heat"], ["mamoswine", "milotic"], ["mamoswine", "gardevoir"], ["mamoswine", "meganium"], ["electivire", "hitmonlee"], ["electivire", "delphox"], ["electivire", "ceruledge"], ["electivire", "lopunny"], ["electivire", "kangaskhan"], ["electivire", "rotom-wash"], ["electivire", "rotom-heat"], ["electivire", "floette-eternal"], ["hitmonlee", "ceruledge"], ["hitmonlee", "kangaskhan"], ["hitmonlee", "blastoise"], ["hitmonlee", "venusaur"], ["hitmonlee", "rotom-wash"], ["hitmonlee", "rotom-heat"], ["hitmonlee", "milotic"], ["hitmonlee", "gardevoir"], ["hitmonlee", "meganium"], ["hitmonlee", "floette-eternal"], ["hitmonchan", "ceruledge"], ["hitmonchan", "scovillain"], ["hitmonchan", "corviknight"], ["hitmonchan", "metagross"], ["hitmonchan", "blastoise"], ["hitmonchan", "venusaur"], ["hitmonchan", "rotom-wash"], ["hitmonchan", "rotom-heat"], ["hitmonchan", "milotic"], ["hitmonchan", "gardevoir"], ["hitmonchan", "meganium"], ["sneasler", "aerodactyl"], ["sneasler", "talonflame"], ["sneasler", "sceptile"], ["sneasler", "raichu"], ["sneasler", "starmie"], ["sneasler", "maushold-family-of-four"], ["sneasler", "froslass"], ["aerodactyl", "talonflame"], ["aerodactyl", "sceptile"], ["talonflame", "sceptile"], ["delphox", "pyroar-male"], ["delphox", "raichu"], ["delphox", "lopunny"], ["delphox", "maushold-family-of-four"], ["delphox", "froslass"], ["pyroar-male", "raichu"], ["pyroar-male", "lopunny"], ["pyroar-male", "starmie"], ["pyroar-male", "maushold-family-of-four"], ["pyroar-male", "froslass"], ["ceruledge", "scovillain"], ["ceruledge", "kangaskhan"], ["ceruledge", "blastoise"], ["ceruledge", "venusaur"], ["ceruledge", "rotom-wash"], ["ceruledge", "rotom-heat"], ["ceruledge", "milotic"], ["ceruledge", "gardevoir"], ["ceruledge", "meganium"], ["ceruledge", "floette-eternal"], ["scovillain", "corviknight"], ["scovillain", "metagross"], ["scovillain", "umbreon"], ["scovillain", "blastoise"], ["scovillain", "venusaur"], ["scovillain", "milotic"], ["scovillain", "gardevoir"], ["scovillain", "meganium"], ["sceptile", "raichu"], ["sceptile", "starmie"], ["sceptile", "maushold-family-of-four"], ["sceptile", "froslass"], ["raichu", "lopunny"], ["raichu", "starmie"], ["raichu", "maushold-family-of-four"], ["raichu", "froslass"], ["lopunny", "starmie"], ["lopunny", "maushold-family-of-four"], ["lopunny", "froslass"], ["starmie", "maushold-family-of-four"], ["starmie", "froslass"], ["kangaskhan", "venusaur"], ["kangaskhan", "rotom-wash"], ["kangaskhan", "rotom-heat"], ["kangaskhan", "milotic"], ["kangaskhan", "gardevoir"], ["kangaskhan", "meganium"], ["kangaskhan", "floette-eternal"], ["scrafty", "tyranitar"], ["scrafty", "corviknight"], ["scrafty", "swampert"], ["scrafty", "umbreon"], ["scrafty", "sylveon"], ["scrafty", "eelektross"], ["scrafty", "vileplume"], ["tyranitar", "corviknight"], ["tyranitar", "swampert"], ["tyranitar", "metagross"], ["tyranitar", "umbreon"], ["tyranitar", "sylveon"], ["doublade", "cetitan"], ["doublade", "toxapex"], ["maushold-family-of-four", "froslass"], ["cetitan", "toxapex"], ["corviknight", "swampert"], ["corviknight", "metagross"], ["corviknight", "umbreon"], ["corviknight", "sylveon"], ["swampert", "metagross"], ["swampert", "umbreon"], ["swampert", "sylveon"], ["swampert", "eelektross"], ["swampert", "vileplume"], ["metagross", "umbreon"], ["metagross", "sylveon"], ["metagross", "blastoise"], ["metagross", "venusaur"], ["metagross", "gardevoir"], ["metagross", "meganium"], ["umbreon", "sylveon"], ["sylveon", "eelektross"], ["sylveon", "vileplume"], ["blastoise", "venusaur"], ["blastoise", "rotom-wash"], ["blastoise", "rotom-heat"], ["blastoise", "milotic"], ["blastoise", "gardevoir"], ["blastoise", "meganium"], ["venusaur", "rotom-wash"], ["venusaur", "rotom-heat"], ["venusaur", "milotic"], ["venusaur", "gardevoir"], ["venusaur", "meganium"], ["rotom-wash", "rotom-heat"], ["rotom-wash", "milotic"], ["rotom-wash", "gardevoir"], ["rotom-wash", "meganium"], ["rotom-wash", "floette-eternal"], ["rotom-heat", "milotic"], ["rotom-heat", "gardevoir"], ["rotom-heat", "meganium"], ["rotom-heat", "floette-eternal"], ["milotic", "gardevoir"], ["milotic", "meganium"], ["eelektross", "vileplume"], ["gardevoir", "meganium"]];
+const ROLE_LABELS={lead:"起點干擾型",attacker:"攻擊手",tank:"坦克防守型"};
+const ROLE_COLORS={lead:"#8b5cf6",attacker:"#ef4444",tank:"#16a34a"};
+const ROLE_ICONS={lead:"⚡",attacker:"⚔️",tank:"🛡️"};
+
+let filterRole=null,hardMode=false;
+let score={ok:0,total:0,streak:0};
+let cur=null,done=false;
+
+document.querySelectorAll("#q-tabs .tab").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    filterRole=tab.dataset.role||null;
+    document.querySelectorAll("#q-tabs .tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    nextQ();
+  });
+});
+
+function toggleHard(){
+  hardMode=!hardMode;
+  const btn=document.getElementById("hardBtn");
+  btn.className="hard-btn"+(hardMode?" on":"");
+  nextQ();
+}
+
+function nextQ(){
+  let a,b,role;
+  if(hardMode){
+    let pairs=HARD;
+    if(filterRole){const rSet=new Set(ROLES[filterRole]||[]);const f=HARD.filter(([x,y])=>rSet.has(x)&&rSet.has(y));if(f.length>0)pairs=f;}
+    const raw=pairs[Math.floor(Math.random()*pairs.length)];
+    [a,b]=Math.random()<.5?[raw[0],raw[1]]:[raw[1],raw[0]];
+    role=filterRole||DATA[a].role;
+  }else{
+    role=filterRole||randomRole();
+    const pool=ROLES[role];
+    if(!pool||pool.length<2){nextQ();return;}
+    let tries=0;
+    do{
+      const i=Math.floor(Math.random()*pool.length);
+      let j;do{j=Math.floor(Math.random()*pool.length);}while(j===i);
+      a=pool[i];b=pool[j];tries++;
+    }while(DATA[a].spd===DATA[b].spd&&tries<50);
+  }
+  cur={pA:a,pB:b,role};done=false;renderQ();
+}
+
+function randomRole(){const keys=Object.keys(ROLES);return keys[Math.floor(Math.random()*keys.length)];}
+
+function renderQ(){
+  const {pA,pB,role}=cur,dA=DATA[pA],dB=DATA[pB];
+  const rl=document.getElementById("roleLabel");
+  rl.textContent=ROLE_ICONS[role]+" "+ROLE_LABELS[role];
+  rl.style.cssText="background:"+ROLE_COLORS[role]+"18;color:"+ROLE_COLORS[role]+";border-color:"+ROLE_COLORS[role]+"55";
+  document.getElementById("hint").style.display="block";
+  ["A","B"].forEach(s=>{
+    const d=s==="A"?dA:dB;
+    document.getElementById("img"+s).src=d.sprite;
+    document.getElementById("name"+s).textContent=d.zh;
+    const spdEl=document.getElementById("spd"+s);spdEl.textContent="?";spdEl.className="spd-display";
+    document.getElementById("card"+s).className="poke-card";
+    const btn=document.getElementById("btn"+s);btn.className="pick-btn";btn.textContent="選這隻！";btn.disabled=false;
+  });
+  document.getElementById("infoWrap").innerHTML="";document.getElementById("nextBtn").style.display="none";
+  const tb=document.getElementById("tieBtn");tb.className="tie-btn";tb.textContent="🤝 平手";tb.disabled=false;
+}
+
+function pick(side){
+  if(done)return;done=true;
+  document.getElementById("hint").style.display="none";
+  const tieBtn=document.getElementById("tieBtn");
+  if(side==="TIE"){
+    tieBtn.textContent="✓ 選平手";tieBtn.className="tie-btn selected";
+    document.getElementById("btnA").className="pick-btn hidden";
+    document.getElementById("btnB").className="pick-btn hidden";
+  }else{
+    document.getElementById("btn"+side).textContent="✓ 選了這隻";
+    document.getElementById("btn"+(side==="A"?"B":"A")).className="pick-btn hidden";
+    tieBtn.className="tie-btn hidden";
+  }
+  const {pA,pB}=cur;
+  const spdA=DATA[pA].spd,spdB=DATA[pB].spd;
+  const isTie=spdA===spdB;
+  const isOk=side==="TIE"?isTie:(!isTie&&side===(spdA>spdB?"A":"B"));
+  score.total++;if(isOk){score.ok++;score.streak++;}else{score.streak=0;}
+  updateScore();
+  countUp("spdA",spdA,550);countUp("spdB",spdB,550);
+  setTimeout(()=>{
+    if(spdA>spdB){
+      document.getElementById("cardA").classList.add("correct");document.getElementById("cardB").classList.add("dimmed");
+      document.getElementById("spdA").classList.add("ok-color");document.getElementById("spdB").classList.add("ng-color");
+    }else if(spdB>spdA){
+      document.getElementById("cardB").classList.add("correct");document.getElementById("cardA").classList.add("dimmed");
+      document.getElementById("spdB").classList.add("ok-color");document.getElementById("spdA").classList.add("ng-color");
+    }else{
+      document.getElementById("cardA").classList.add("correct");document.getElementById("cardB").classList.add("correct");
+    }
+    if(!isOk){
+      if(side==="TIE"){tieBtn.style.cssText="border-color:#dc2626;color:#dc2626;background:#fef2f2";}
+      else{document.getElementById("card"+side).classList.add("wrong");}
+    }
+    showInfo(isOk,isTie);document.getElementById("nextBtn").style.display="block";
+  },640);
+}
+
+function showInfo(isOk,isTie){
+  const {pA,pB}=cur,dA=DATA[pA],dB=DATA[pB];
+  const spdA=dA.spd,spdB=dB.spd,maxS=Math.max(spdA,spdB,1);
+  let h='<div class="info-wrap">';
+  const msg=isTie?"🤝 速度相同！":(isOk?"🎉 答對了！":"😅 答錯了！");
+  h+='<div class="result-msg">'+msg+'</div>';
+  h+='<div class="info-block"><div class="info-hd">⚡ 速度對比</div><div class="spd-cmp">';
+  [[dA.zh,spdA,spdA>=spdB],[dB.zh,spdB,spdB>=spdA]].forEach(([zh,spd,win])=>{
+    const pct=Math.round(spd/maxS*100),col=win?"#059669":"#94a3b8";
+    h+='<div class="spd-row"><span class="pn">'+zh+'</span>'+
+       '<div class="spd-bar-bg"><div class="spd-bar" style="width:'+pct+'%;background:'+col+'"></div></div>'+
+       '<span class="spd-val" style="color:'+col+'">'+spd+'</span></div>';
+  });
+  h+='</div></div>';
+  const hasPri=(dA.priority&&dA.priority.length)||(dB.priority&&dB.priority.length);
+  if(hasPri){
+    h+='<div class="info-2col">';
+    [dA,dB].forEach(d=>{
+      h+='<div class="info-col"><div class="col-lbl">'+d.zh+'</div>';
+      if(d.priority&&d.priority.length){
+        h+='<div class="info-block"><div class="info-hd">🥊 先制招</div><div class="pri-list">';
+        d.priority.forEach(([nm,pr])=>{h+='<span class="pri-chip"><b>'+pr+'</b> '+nm+'</span>';});
+        h+='</div></div>';
+      }else{
+        h+='<div class="info-block" style="color:#94a3b8;font-size:.78rem;padding:.5rem .7rem">（無先制招）</div>';
+      }
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+  h+='</div>';
+  document.getElementById("infoWrap").innerHTML=h;
+}
+
+function updateScore(){
+  const s=score;
+  document.getElementById("scoreDisp").innerHTML='答對 <b>'+s.ok+'</b> / 共 <b>'+s.total+'</b> 題';
+  const el=document.getElementById("streakDisp");
+  el.textContent=s.streak>=3?"🔥 連答 "+s.streak+" 題！":(s.streak>0?"✅ +"+s.streak:"");
+}
+
+function countUp(id,target,ms){
+  const el=document.getElementById(id),start=Date.now();
+  (function tick(){
+    const t=Math.min((Date.now()-start)/ms,1);
+    el.textContent=Math.round(t*target);
+    if(t<1)requestAnimationFrame(tick);else el.textContent=target;
+  })();
+}
+
+/* ── Init ── */
+rebuildTypeFilter();
+render();
+nextQ();
+</script>
+</body>
+</html>
